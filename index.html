@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="네소프레소 캡슐로 한 달에 얼마를 쓰고, 카페 대비 얼마나 아끼는지 계산해 보세요.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="네소프레소 절약 계산기">
+<meta property="og:description" content="하루 몇 잔, 어떤 캡슐로 마시면 한 달에 얼마? 카페 대비 절약액과 머신값 회수 기간까지 계산합니다.">
+<meta name="twitter:card" content="summary">
+<title>네소프레소 절약 계산기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+<style>
+[hidden]{display:none!important}
+/* Layout: 크롬 탭 스트립 + 하나의 흰 작업면. 첫 탭은 '새 탭'처럼 중앙 정렬 카드, 나머지는 좌우 비교. */
+:root{
+  --strip:#dde1e7; --strip-fg:#4b5563; --surface:#ffffff; --bg:#f1f3f6;
+  --fg:#14181f; --muted:#5d6675; --line:#e2e6ec; --field:#f4f6f9;
+  --nes:#0b7285; --nes-soft:#e3f3f5;
+  --cafe:#b7791f; --cafe-soft:#fbf1de;
+  --good:#1e8a4c; --good-soft:#e2f4e9; --bad:#c2410c; --bad-soft:#fdeadf;
+  --font:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --strip:#16181c; --strip-fg:#a3acba; --surface:#23262c; --bg:#1b1d22;
+  --fg:#eceff4; --muted:#9aa4b2; --line:#343842; --field:#2b2f36;
+  --nes:#4cc3d4; --nes-soft:#18363b; --cafe:#e5aa4d; --cafe-soft:#3b2f18;
+  --good:#5fd08a; --good-soft:#173a26; --bad:#ff9a6b; --bad-soft:#40241a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --strip:#16181c; --strip-fg:#a3acba; --surface:#23262c; --bg:#1b1d22;
+  --fg:#eceff4; --muted:#9aa4b2; --line:#343842; --field:#2b2f36;
+  --nes:#4cc3d4; --nes-soft:#18363b; --cafe:#e5aa4d; --cafe-soft:#3b2f18;
+  --good:#5fd08a; --good-soft:#173a26; --bad:#ff9a6b; --bad-soft:#40241a; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:400 15px/1.55 var(--font);margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+.wrap{max-width:980px;margin:0 auto}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--nes);outline-offset:2px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* tab strip */
+.strip{background:var(--strip);margin-left:calc(-1*max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1*max(16px,env(safe-area-inset-right,0px)));
+  padding:10px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.tabs{display:flex;gap:2px;max-width:980px;margin:0 auto;align-items:flex-end}
+.tab{flex:0 1 220px;min-width:0;border:0;background:transparent;color:var(--strip-fg);padding:9px 14px;border-radius:10px 10px 0 0;
+  display:flex;align-items:center;gap:8px;text-align:left;font-size:13.5px;font-weight:500;position:relative}
+.tab:hover{background:color-mix(in srgb,var(--surface) 45%,transparent)}
+.tab .dot{flex:none;width:14px;height:14px;border-radius:50%;background:var(--strip-fg);opacity:.5}
+.tab .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--fg);font-weight:700}
+.tab[aria-selected="true"] .dot{opacity:1}
+.tab[data-t="calc"][aria-selected="true"] .dot{background:var(--nes)}
+.tab[data-t="cafe"][aria-selected="true"] .dot{background:var(--cafe)}
+.tab[data-t="strength"][aria-selected="true"] .dot{background:var(--good)}
+.page{background:var(--surface);border-radius:0 0 18px 18px;padding:28px clamp(16px,4vw,36px) 36px;min-height:70vh;margin-bottom:24px}
+
+h1{font-size:clamp(24px,5vw,34px);line-height:1.25;margin:0 0 6px;font-weight:800;text-wrap:balance;letter-spacing:-.02em}
+h2{font-size:17px;margin:0 0 12px;font-weight:700}
+.sub{color:var(--muted);margin:0 0 24px;max-width:60ch}
+.lead{display:grid;gap:4px;margin-bottom:22px}
+
+/* controls */
+.panel{border:1px solid var(--line);border-radius:14px;padding:18px;background:var(--surface)}
+.grid{display:grid;gap:18px 24px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.field{display:grid;gap:7px;min-width:0}
+.field>label,.field>.l{font-size:13px;font-weight:700;color:var(--muted)}
+.seg{display:flex;background:var(--field);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;border-radius:8px;padding:8px 6px;font-size:14px;font-weight:500;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);font-weight:700;box-shadow:0 1px 3px rgb(0 0 0/.14)}
+.stepper{display:flex;align-items:center;background:var(--field);border-radius:10px;overflow:hidden}
+.stepper button{width:44px;height:42px;border:0;background:transparent;font-size:20px;color:var(--muted)}
+.stepper button:hover{background:color-mix(in srgb,var(--fg) 8%,transparent)}
+.stepper output{flex:1;text-align:center;font-weight:700;font-size:16px}
+.stepper output small{color:var(--muted);font-weight:500;font-size:12px;margin-left:3px}
+.input{background:var(--field);border:1px solid transparent;border-radius:10px;padding:9px 12px;width:100%;min-width:0}
+.input:focus{border-color:var(--nes);outline:none}
+.hint{font-size:12.5px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--surface);border-color:var(--fg)}
+
+/* brand tiles */
+.brands{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.brand{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 12px;text-align:left;display:grid;gap:2px}
+.brand b{font-size:14.5px}
+.brand span{font-size:12px;color:var(--muted)}
+.brand[aria-pressed="true"]{border-color:var(--nes);background:var(--nes-soft)}
+
+/* results */
+.result{display:grid;gap:16px;margin-top:22px}
+.hero-num{background:var(--nes-soft);border-radius:16px;padding:22px clamp(16px,3vw,28px);display:grid;gap:14px}
+.hero-num .big{font-size:clamp(34px,8vw,52px);font-weight:800;line-height:1.1;letter-spacing:-.02em;color:var(--nes)}
+.hero-num .cap{font-size:13px;font-weight:700;color:var(--muted)}
+.facts{display:grid;gap:10px 20px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+.fact{display:grid;gap:1px}
+.fact .k{font-size:12.5px;color:var(--muted)}
+.fact .v{font-weight:700;font-size:16px}
+.bars{display:grid;gap:8px}
+.bar{display:grid;grid-template-columns:96px 1fr 92px;align-items:center;gap:10px;font-size:13.5px}
+.bar .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .tr{background:var(--field);border-radius:6px;height:14px;overflow:hidden}
+.bar .tr i{display:block;height:100%;background:color-mix(in srgb,var(--nes) 45%,var(--surface));border-radius:6px}
+.bar.me .tr i{background:var(--nes)} .bar.me .nm{font-weight:700}
+.bar .val{text-align:right;font-size:12.5px}
+details{border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+summary{cursor:pointer;font-weight:700;font-size:14px}
+.ptable{display:grid;gap:8px;margin-top:12px}
+.prow{display:grid;grid-template-columns:1fr 92px 92px;gap:8px;align-items:center;font-size:13.5px}
+.prow.hd{font-size:12px;color:var(--muted);font-weight:700}
+.prow .input{padding:6px 8px;text-align:right}
+
+/* compare */
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.side{border-radius:16px;padding:20px;display:grid;gap:6px;align-content:start;min-width:0}
+.side.nes{background:var(--nes-soft)} .side.cafe{background:var(--cafe-soft)}
+.side .who{font-size:13px;font-weight:700}
+.side.nes .who,.side.nes .amt{color:var(--nes)} .side.cafe .who,.side.cafe .amt{color:var(--cafe)}
+.side .amt{font-size:clamp(26px,5.5vw,38px);font-weight:800;line-height:1.15;letter-spacing:-.02em}
+.side .det{font-size:13px;color:var(--muted)}
+.verdict{border-radius:16px;padding:18px 22px;display:grid;gap:4px}
+.verdict.good{background:var(--good-soft)} .verdict.bad{background:var(--bad-soft)} .verdict.flat{background:var(--field)}
+.verdict .t{font-size:clamp(19px,4vw,24px);font-weight:800;text-wrap:balance}
+.verdict.good .t{color:var(--good)} .verdict.bad .t{color:var(--bad)}
+.verdict .d{font-size:14px;color:var(--muted)}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.chartbox{overflow-x:auto}
+svg.chart{width:100%;min-width:420px;height:auto;display:block}
+.chart text{font:500 11px var(--mono);fill:var(--muted)}
+.chart .gl{stroke:var(--line);stroke-width:1}
+.chart .ln{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.chart .ln.n{stroke:var(--nes)} .chart .ln.c{stroke:var(--cafe)}
+.chart .mk{fill:var(--surface);stroke:var(--fg);stroke-width:2}
+.chart text.mt{fill:var(--fg);font-weight:600}
+.others{display:grid;gap:6px}
+.orow{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;padding:6px 0;border-bottom:1px solid var(--line)}
+.orow:last-child{border-bottom:0}
+.pos{color:var(--good);font-weight:700} .neg{color:var(--bad);font-weight:700}
+
+/* strength */
+.cards3{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.sc{border:1.5px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:3px;min-width:0}
+.sc.hl{border-color:var(--good);background:var(--good-soft)}
+.sc .t{font-size:13px;font-weight:700;color:var(--muted)}
+.sc .p{font-size:24px;font-weight:800;letter-spacing:-.02em}
+.sc .m{font-size:13px;color:var(--muted)}
+.diff{background:var(--field);border-radius:14px;padding:16px 20px;font-size:15px}
+.diff b{font-weight:800}
+.mix{display:grid;gap:6px}
+.mrow{display:grid;grid-template-columns:78px 1fr 112px 92px;gap:10px;align-items:center;font-size:13.5px;padding:3px 6px;border-radius:8px}
+.mrow.me{background:var(--nes-soft)}
+.mrow .tr{background:var(--field);border-radius:6px;height:12px;overflow:hidden}
+.mrow .tr i{display:block;height:100%;background:var(--good);border-radius:6px}
+.mrow>span:nth-child(3),.mrow>span:nth-child(4){text-align:right}
+.two{display:grid;gap:14px 20px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+select.input{appearance:auto}
+.btab{overflow-x:auto}
+.brow{display:grid;grid-template-columns:96px repeat(3,minmax(90px,1fr)) minmax(150px,1.4fr);gap:8px;min-width:560px;font-size:13.5px;padding:7px 6px;border-bottom:1px solid var(--line);align-items:center}
+.brow.hd{font-size:12px;color:var(--muted);font-weight:700}
+.brow.me{background:var(--nes-soft);border-radius:8px}
+.spend{display:inline-block;font-size:12px;font-weight:700;color:var(--bad);background:var(--bad-soft);border-radius:999px;padding:2px 10px;margin-left:8px}
+.note{font-size:12.5px;color:var(--muted);margin-top:22px;border-top:1px solid var(--line);padding-top:14px}
+section+section{margin-top:26px}
+
+@media (max-width:560px){
+  .tab{padding:9px 10px;flex:1 1 0;font-size:12.5px}.tab .dot{display:none}
+  .vs{grid-template-columns:1fr}
+  .bar{grid-template-columns:78px 1fr 80px}
+  .mrow{grid-template-columns:62px 1fr 90px}.mrow>span:nth-child(4){display:none}
+}
+@media (prefers-reduced-motion:no-preference){.hero-num .big,.side .amt{transition:color .2s}}
+</style>
+</head>
+<body>
+<div class="strip"><div class="tabs" role="tablist" aria-label="계산기 메뉴">
+  <button class="tab" role="tab" data-t="calc" id="tab-calc"><span class="dot"></span><span class="lbl">내 월 캡슐비</span></button>
+  <button class="tab" role="tab" data-t="cafe" id="tab-cafe"><span class="dot"></span><span class="lbl">카페 vs 캡슐</span></button>
+  <button class="tab" role="tab" data-t="strength" id="tab-strength"><span class="dot"></span><span class="lbl">강도별 비교</span></button>
+</div></div>
+
+<main class="wrap"><div class="page">
+
+<!-- ============ TAB 1 ============ -->
+<div role="tabpanel" aria-labelledby="tab-calc" data-p="calc">
+  <div class="lead">
+    <h1>네소프레소, 한 달에 얼마 쓰게 될까?</h1>
+    <p class="sub">하루에 몇 잔, 어떤 캡슐로 마시는지 입력하면 한 달 캡슐값이 나옵니다. 머신을 아직 안 샀어도, 이미 있어도 쓸 수 있어요.</p>
+  </div>
+
+  <div class="panel"><div class="grid">
+    <div class="field"><span class="l">머신 상태</span>
+      <div class="seg" data-key="owned"><button data-v="false">아직 안 샀어요</button><button data-v="true">이미 있어요</button></div></div>
+    <div class="field"><span class="l">머신 종류</span>
+      <div class="seg" data-key="line"><button data-v="original">오리지널</button><button data-v="vertuo">버츄오</button></div></div>
+    <div class="field"><span class="l">하루에 집에서 내려 마시는 횟수</span>
+      <div class="stepper" data-key="cups" data-min="1" data-max="10"><button data-d="-1" aria-label="줄이기">−</button><output></output><button data-d="1" aria-label="늘리기">+</button></div></div>
+    <div class="field"><span class="l">한 잔에 쓰는 캡슐 수</span>
+      <div class="stepper" data-key="perCup" data-min="1" data-max="3"><button data-d="-1" aria-label="줄이기">−</button><output></output><button data-d="1" aria-label="늘리기">+</button></div></div>
+    <div class="field"><span class="l">그중 고강도 캡슐로 마시는 잔 수</span>
+      <div class="stepper" data-key="hi" data-min="0" data-max="10"><button data-d="-1" aria-label="줄이기">−</button><output></output><button data-d="1" aria-label="늘리기">+</button></div></div>
+    <div class="field"><span class="l">한 달에 마시는 날</span>
+      <div class="stepper" data-key="days" data-min="1" data-max="31"><button data-d="-1" aria-label="줄이기">−</button><output></output><button data-d="1" aria-label="늘리기">+</button></div></div>
+    <div class="field" id="machineField"><label for="machine">머신 가격 (원)</label>
+      <input class="input num" id="machine" type="number" inputmode="numeric" min="0" step="10000">
+      <div class="chips" id="machinePresets"></div></div>
+  </div></div>
+
+  <section><h2>마시는 캡슐 브랜드</h2><div class="brands" id="brands"></div></section>
+
+  <div class="result">
+    <div class="hero-num">
+      <div><div class="cap" id="r1cap"></div><div class="big num" id="r1big"></div><div class="hint" id="r1note" style="margin-top:6px"></div></div>
+      <div class="facts" id="r1facts"></div>
+    </div>
+    <section><h2>같은 조건으로 다른 브랜드를 마신다면</h2><div class="bars" id="r1bars"></div></section>
+    <details><summary>캡슐 가격 직접 고치기 (개당, 원)</summary>
+      <p class="hint">여기 가격은 추정치입니다. 실제로 사는 가격으로 바꾸면 모든 탭이 같이 바뀝니다.</p>
+      <div class="ptable" id="ptable"></div></details>
+  </div>
+</div>
+
+<!-- ============ TAB 2 ============ -->
+<div role="tabpanel" aria-labelledby="tab-cafe" data-p="cafe" hidden>
+  <div class="lead">
+    <h1>카페에서 사 마시는 것과 얼마나 차이 날까?</h1>
+    <p class="sub" id="c2sub"></p>
+  </div>
+  <div class="panel"><div class="grid">
+    <div class="field" style="grid-column:1/-1"><span class="l">자주 가는 카페</span><div class="chips" id="cafes"></div></div>
+    <div class="field"><label for="cafePrice">그 카페에서 내가 마시는 음료 가격 (원)</label>
+      <input class="input num" id="cafePrice" type="number" inputmode="numeric" min="0" step="100"></div>
+    <div class="field"><span class="l">비교 기준</span><div class="hint" id="c2basis" style="line-height:1.7"></div></div>
+  </div></div>
+
+  <div class="result">
+    <div class="vs">
+      <div class="side nes"><span class="who" id="c2nWho"></span><span class="amt num" id="c2nAmt"></span><span class="det" id="c2nDet"></span></div>
+      <div class="side cafe"><span class="who" id="c2cWho"></span><span class="amt num" id="c2cAmt"></span><span class="det" id="c2cDet"></span></div>
+    </div>
+    <div class="verdict" id="c2verdict"><span class="t"></span><span class="d"></span></div>
+    <section><h2 id="c2chartH"></h2>
+      <div class="legend"><span><i style="background:var(--cafe)"></i>카페</span><span><i style="background:var(--nes)"></i>네소프레소</span></div>
+      <div class="chartbox" id="c2chart"></div></section>
+    <section><h2>다른 카페였다면 한 달에 얼마나 남을까</h2><div class="others" id="c2others"></div></section>
+  </div>
+</div>
+
+<!-- ============ TAB 3 ============ -->
+<div role="tabpanel" aria-labelledby="tab-strength" data-p="strength" hidden>
+  <div class="lead">
+    <h1>고강도 1개 vs 보통 2개, 뭐가 더 쌀까?</h1>
+    <p class="sub" id="c3sub"></p>
+  </div>
+  <div class="panel"><div class="two">
+    <div class="field"><label for="nBrand">보통 강도로 쓸 캡슐</label><select class="input" id="nBrand"></select></div>
+    <div class="field"><label for="sBrand">고강도로 쓸 캡슐</label><select class="input" id="sBrand"></select></div>
+    <div class="field"><span class="l">하루에 쓰는 보통 강도 캡슐 수</span>
+      <div class="stepper" data-key="nCaps" data-min="0" data-max="12"><button data-d="-1" aria-label="줄이기">−</button><output></output><button data-d="1" aria-label="늘리기">+</button></div></div>
+    <div class="field"><span class="l">하루에 쓰는 고강도 캡슐 수</span>
+      <div class="stepper" data-key="sCaps" data-min="0" data-max="12"><button data-d="-1" aria-label="줄이기">−</button><output></output><button data-d="1" aria-label="늘리기">+</button></div></div>
+  </div></div>
+
+  <div class="result">
+    <section><h2>내가 고른 개수로 한 달 쓰는 돈 (지출)</h2><div class="cards3" id="c3combo"></div></section>
+    <section><h2>캡슐 1개 가격 비교</h2><div class="cards3" id="c3cards"></div></section>
+    <div class="diff" id="c3diff"></div>
+    <section><h2>브랜드별로 고강도는 보통보다 얼마나 비쌀까</h2><p class="hint" id="c3brandNote" style="margin:0 0 10px"></p><div class="btab" id="c3brands"></div></section>
+    <section><h2 id="c3mixH"></h2><div class="mix" id="c3mix"></div></section>
+  </div>
+</div>
+
+<p class="note">캡슐·카페 가격은 확인된 정가가 아니라 추정한 예시값입니다. 판매처와 시기에 따라 다르니 직접 입력한 가격이 기준입니다. 머신 감가, 전기, 석회 제거 비용, 우유·시럽 같은 추가 재료비는 계산에 넣지 않았습니다.</p>
+</div></main>
+
+<script>
+/* ---------- data (추정 예시값, 화면에서 수정 가능) ---------- */
+const BRANDS=[
+  {id:'nes',  name:'네스프레소',   p:{original:{n:850, s:900},  vertuo:{n:1400,s:1500}}},
+  {id:'sbx',  name:'스타벅스',     p:{original:{n:760, s:790},  vertuo:{n:1300,s:1350}}},
+  {id:'illy', name:'일리',         p:{original:{n:880, s:920}}},
+  {id:'paul', name:'폴바셋',       p:{original:{n:1000,s:1050}}},
+  {id:'two',  name:'투썸플레이스', p:{original:{n:950, s:980}}},
+  {id:'holl', name:'할리스',       p:{original:{n:900, s:940}}},
+  {id:'momo', name:'모모스',       p:{original:{n:1150,s:1200}}},
+  {id:'blue', name:'블루보틀',     p:{original:{n:1250,s:1300}}},
+];
+const CAFES=[
+  {id:'sbx',  name:'스타벅스',     price:4700},
+  {id:'paul', name:'폴바셋',       price:4800},
+  {id:'two',  name:'투썸플레이스', price:4500},
+  {id:'holl', name:'할리스',       price:4500},
+  {id:'momo', name:'모모스',       price:5000},
+  {id:'blue', name:'블루보틀',     price:5500},
+  {id:'mega', name:'메가커피',     price:2000},
+  {id:'comp', name:'컴포즈',       price:1500},
+];
+const MACHINES=[{n:'입문 오리지널',v:130000},{n:'중급 오리지널',v:200000},{n:'버츄오',v:230000}];
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const won=n=>Math.round(n).toLocaleString('ko-KR')+'원';
+const man=n=>{const m=n/10000;return (Math.abs(m)>=100?Math.round(m):Math.round(m*10)/10).toLocaleString('ko-KR')+'만원'};
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+
+const DEF={owned:false,line:'original',brand:'nes',cups:2,perCup:1,hi:0,days:30,machine:150000,
+  cafe:'sbx',nB:'nes',sB:'nes',nCaps:2,sCaps:2,tab:'calc',P:null,C:null};
+let S=JSON.parse(JSON.stringify(DEF));
+S.P=Object.fromEntries(BRANDS.map(b=>[b.id,JSON.parse(JSON.stringify(b.p))]));
+S.C=Object.fromEntries(CAFES.map(c=>[c.id,c.price]));
+try{const o=JSON.parse(localStorage.getItem('nesp-calc')||'null');if(o)S={...S,...o,P:{...S.P,...o.P},C:{...S.C,...o.C}}}catch(e){}
+const save=()=>{try{localStorage.setItem('nesp-calc',JSON.stringify(S))}catch(e){}};
+
+/* ---------- calc ---------- */
+const offers=(b,line)=>!!S.P[b]?.[line];
+const brandsOf=line=>BRANDS.filter(b=>offers(b.id,line));
+const price=(b,hi)=>S.P[b][S.line][hi?'s':'n'];
+const monthly=(bn,bs)=>S.days*S.perCup*((S.cups-S.hi)*price(bn,false)+S.hi*price(bs,true));
+const cupsMonth=()=>S.cups*S.days;
+
+/* 절약액이 1만 원 미만이면 '비슷', 구매 전이면 머신값 회수 기간(개월)으로 문구를 나눈다. */
+const months=m=>m<12?`${m.toFixed(1)}개월`:`${Math.floor(m/12)}년 ${Math.round(m%12)}개월`;
+function verdict(saving,payback,owned){
+  if(saving<=0) return {tone:'bad',title:`카페가 한 달 ${won(-saving)} 더 저렴해요`,desc:owned?'이 조건에서는 캡슐값이 카페보다 비쌉니다.':'이 조건에서는 머신을 사도 돈이 남지 않습니다.'};
+  if(saving<10000) return {tone:'flat',title:`한 달 ${won(saving)} 절약, 거의 비슷해요`,desc:owned?'차이가 작아서 맛과 편의성으로 고르는 편이 낫습니다.':'머신값을 회수하기엔 절약액이 너무 작습니다. 회수까지 '+months(payback)+' 걸립니다.'};
+  if(owned) return {tone:'good',title:`한 달 ${won(saving)} 절약해요`,desc:saving<30000?'이미 가진 머신이라 캡슐값만 비교했습니다. 소소하게 아끼는 수준입니다.':'이미 가진 머신이라 캡슐값만 비교했습니다. 꽤 큰 절약입니다.'};
+  const d=payback<=6?'금방 본전을 뽑는 편입니다.':payback<=18?'무난하게 회수하는 편입니다.':payback<=36?'회수가 오래 걸리니 오래 쓸 계획일 때만 이득입니다.':'3년 넘게 걸립니다. 구매는 신중하게 고민해 보세요.';
+  return {tone:payback<=36?'good':'flat',title:`한 달 ${won(saving)} 절약 · 머신값 ${months(payback)}이면 회수`,desc:d};
+}
+
+/* ---------- controls ---------- */
+function parseV(v){return v==='true'?true:v==='false'?false:isNaN(v)?v:Number(v)}
+document.addEventListener('click',e=>{
+  const sb=e.target.closest('.seg button');
+  if(sb){const k=sb.parentNode.dataset.key;S[k]=parseV(sb.dataset.v);
+    if(k==='line'){ensureBrand();buildPriceTable()} update();return}
+  const st=e.target.closest('.stepper button');
+  if(st){const el=st.parentNode,k=el.dataset.key;
+    S[k]=clamp(S[k]+Number(st.dataset.d),Number(el.dataset.min),k==='hi'?S.cups:Number(el.dataset.max));update();return}
+  const tb=e.target.closest('.tab');
+  if(tb){go(tb.dataset.t,true)}
+});
+function ensureBrand(){
+  const ok=brandsOf(S.line).map(b=>b.id);
+  for(const k of ['brand','nB','sB']) if(!ok.includes(S[k])) S[k]='nes';
+}
+function go(t,push){
+  S.tab=t;
+  $$('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));
+  $$('[data-p]').forEach(p=>p.hidden=p.dataset.p!==t);
+  if(push){try{history.replaceState(null,'','#'+t)}catch(e){}}
+  save();
+}
+$('#machine').addEventListener('input',e=>{S.machine=Math.max(0,Number(e.target.value)||0);update(true)});
+$('#cafePrice').addEventListener('input',e=>{S.C[S.cafe]=Math.max(0,Number(e.target.value)||0);update(true)});
+$('#nBrand').addEventListener('change',e=>{S.nB=e.target.value;update()});
+$('#sBrand').addEventListener('change',e=>{S.sB=e.target.value;update()});
+
+function buildPriceTable(){
+  const bs=brandsOf(S.line);
+  $('#ptable').innerHTML='<div class="prow hd"><span>브랜드</span><span>보통 강도</span><span>고강도</span></div>'+
+    bs.map(b=>`<div class="prow"><span>${b.name}</span>
+      <input class="input num" type="number" min="0" step="10" data-b="${b.id}" data-s="n" value="${S.P[b.id][S.line].n}" aria-label="${b.name} 보통 강도 캡슐 가격">
+      <input class="input num" type="number" min="0" step="10" data-b="${b.id}" data-s="s" value="${S.P[b.id][S.line].s}" aria-label="${b.name} 고강도 캡슐 가격"></div>`).join('');
+}
+$('#ptable').addEventListener('input',e=>{
+  const i=e.target;if(!i.dataset.b)return;
+  S.P[i.dataset.b][S.line][i.dataset.s]=Math.max(0,Number(i.value)||0);update(true);
+});
+$('#machinePresets').innerHTML=MACHINES.map(m=>`<button class="chip" data-m="${m.v}">${m.n} ${man(m.v)}</button>`).join('');
+$('#machinePresets').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b){S.machine=Number(b.dataset.m);update()}});
+$('#cafes').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(b){S.cafe=b.dataset.c;update()}});
+$('#brands').addEventListener('click',e=>{const b=e.target.closest('[data-b]');if(b){S.brand=b.dataset.b;S.nB=S.sB=S.brand;update()}});
+
+/* ---------- render ---------- */
+function update(typing){
+  S.hi=clamp(S.hi,0,S.cups);
+  $$('.seg').forEach(g=>[...g.children].forEach(b=>b.setAttribute('aria-pressed',String(parseV(b.dataset.v)===S[g.dataset.key]))));
+  $$('.stepper').forEach(g=>{const k=g.dataset.key,u={cups:'잔',perCup:'개',hi:'잔',days:'일',nCaps:'개',sCaps:'개'}[k];
+    g.querySelector('output').innerHTML=`${S[k]}<small>${u}</small>`;
+    if(k==='hi')g.dataset.max=S.cups});
+  $('#machineField').hidden=S.owned;
+  if(!typing){$('#machine').value=S.machine;$('#cafePrice').value=S.C[S.cafe]}
+
+  const bs=brandsOf(S.line), cur=BRANDS.find(b=>b.id===S.brand);
+  $('#brands').innerHTML=bs.map(b=>`<button class="brand" data-b="${b.id}" aria-pressed="${b.id===S.brand}"><b>${b.name}</b><span class="num">${won(S.P[b.id][S.line].n)} · 고강도 ${won(S.P[b.id][S.line].s)}</span></button>`).join('');
+
+  /* tab 1 */
+  const mc=monthly(S.brand,S.brand), cm=cupsMonth(), caps=cm*S.perCup;
+  $('#r1cap').innerHTML=`${cur.name} 캡슐로 하루 ${S.cups}잔 마실 때, 한 달에 쓰는 돈<span class="spend">지출</span>`;
+  $('#r1note').textContent='절약액이 아니라 캡슐을 사는 데 나가는 비용입니다. 카페 대비 얼마나 아끼는지는 \'카페 vs 캡슐\' 탭에서 봅니다.';
+  $('#r1big').textContent=won(mc);
+  $('#r1facts').innerHTML=[
+    ['한 잔 평균',won(mc/cm)],['하루',won(mc/S.days)],['1년',man(mc*12)],
+    ['한 달 캡슐',`${caps}개 (10개입 ${Math.ceil(caps/10)}박스)`],
+    ...(S.owned?[]:[['머신 포함 1년',man(mc*12+S.machine)]])
+  ].map(([k,v])=>`<div class="fact"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('');
+  const all=bs.map(b=>({b,v:monthly(b.id,b.id)})).sort((a,c)=>a.v-c.v), mx=Math.max(...all.map(x=>x.v));
+  $('#r1bars').innerHTML=all.map(x=>`<div class="bar ${x.b.id===S.brand?'me':''}"><span class="nm">${x.b.name}</span><span class="tr"><i style="width:${x.v/mx*100}%"></i></span><span class="val num">${won(x.v)}</span></div>`).join('');
+
+  /* tab 2 */
+  const cafe=CAFES.find(c=>c.id===S.cafe), cp=S.C[S.cafe], cMon=cm*cp, saving=cMon-mc;
+  const payback=!S.owned&&saving>0?S.machine/saving:Infinity;
+  $('#cafes').innerHTML=CAFES.map(c=>`<button class="chip" data-c="${c.id}" aria-pressed="${c.id===S.cafe}">${c.name}</button>`).join('');
+  $('#c2sub').textContent=`첫 탭에서 입력한 ${cur.name} 캡슐 기준입니다. 같은 횟수만큼 카페에서 사 마셨다면 어떻게 달라지는지 봅니다.`;
+  $('#c2basis').innerHTML=`하루 ${S.cups}잔 × 한 달 ${S.days}일 = <b class="num">${cm}잔</b><br>${S.owned?'이미 가진 머신이라 머신값은 제외':'머신 '+won(S.machine)+' 포함'}`;
+  $('#c2nWho').textContent=`네소프레소 (${cur.name})`; $('#c2nAmt').textContent=won(mc);
+  $('#c2nDet').textContent=`한 달 ${cm}잔 · 한 잔 ${won(mc/cm)}`;
+  $('#c2cWho').textContent=`${cafe.name} 카페`; $('#c2cAmt').textContent=won(cMon);
+  $('#c2cDet').textContent=`한 달 ${cm}잔 · 한 잔 ${won(cp)}`;
+  const v=verdict(saving,payback,S.owned), vb=$('#c2verdict');
+  vb.className='verdict '+v.tone; vb.children[0].textContent=v.title; vb.children[1].textContent=v.desc+(saving>0?` 1년이면 ${won(saving*12-(S.owned?0:S.machine))} 남습니다${S.owned?'':' (머신값 제외 후)'}.`:'');
+  $('#c2chartH').textContent=S.owned?'누적 지출 비교':'머신값을 포함한 누적 지출 비교';
+  $('#c2chart').innerHTML=chart(mc,cMon,S.owned?0:S.machine,payback);
+  $('#c2others').innerHTML=CAFES.map(c=>{const s=cm*S.C[c.id]-mc;return `<div class="orow"><span>${c.name} <span class="num hint">${won(S.C[c.id])}</span></span><span class="num ${s>0?'pos':'neg'}">${s>0?'+':'−'}${won(Math.abs(s))} / 월</span></div>`}).join('');
+
+  /* tab 3 */
+  const opts=bs.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+  $('#nBrand').innerHTML=opts;$('#sBrand').innerHTML=opts;$('#nBrand').value=S.nB;$('#sBrand').value=S.sB;
+  const pn=price(S.nB,false), ps=price(S.sB,true), D=cm;
+  $('#c3sub').textContent=`하루에 쓰는 보통·고강도 캡슐 개수를 직접 고르면 한 달 지출이 바로 바뀝니다. 한 달 ${S.days}일 기준이고, 마시는 날은 첫 탭에서 바꿀 수 있어요.`;
+  const sc=[['보통 강도 1개',pn,false],['고강도 1개',ps,false],['보통 강도 2개',pn*2,false],['고강도 2개',ps*2,false]];
+  const best2=Math.min(ps,pn*2);
+  $('#c3cards').innerHTML=sc.map(([t,c])=>`<div class="sc ${(t==='고강도 1개'&&ps<=pn*2)||(t==='보통 강도 2개'&&pn*2<ps)?'hl':''}"><span class="t">${t}</span><span class="p num">${won(c)}</span><span class="m num">한 달 ${won(c*D)}</span></div>`).join('');
+  const d=ps-pn*2, md=Math.abs(d)*D;
+  $('#c3diff').innerHTML=d===0?'고강도 1개와 보통 2개의 값이 같습니다.':
+    `<b>${d<0?'고강도 1개':'보통 강도 2개'}</b>가 한 잔에 <b class="num">${won(Math.abs(d))}</b> 더 쌉니다. 한 달이면 <b class="num">${won(md)}</b>, 1년이면 <b class="num">${won(md*12)}</b> 차이입니다.`;
+  const T=S.nCaps+S.sCaps, dm=S.days, sg=v=>(v>=0?'+':'−')+won(Math.abs(v));
+  const cost=(n,s)=>dm*(n*pn+s*ps), allN=cost(T,0), allS=cost(0,T), mine=cost(S.nCaps,S.sCaps);
+  const dl=v=>v===allN?'기준':sg(v-allN);
+  $('#c3combo').innerHTML=T===0?'<p class="hint">위에서 캡슐 개수를 1개 이상 골라 주세요.</p>':[
+    ['전부 보통 강도',`보통 ${T}개`,allN,false],['전부 고강도',`고강도 ${T}개`,allS,false],['내 조합',`보통 ${S.nCaps}개 + 고강도 ${S.sCaps}개`,mine,true]
+  ].map(([t,sub,v,me])=>`<div class="sc ${me?'hl':''}"><span class="t">${t}</span><span class="p num">${won(v)}</span><span class="m">하루 ${sub} · 한 달 ${dm}일</span><span class="m num">전부 보통 대비 ${dl(v)} / 월</span></div>`).join('');
+  const rowsB=bs.map(b=>{const n=S.P[b.id][S.line].n,s=S.P[b.id][S.line].s;return {b,n,s,d:s-n,x:s-2*n}});
+  const cheaper=rowsB.filter(r=>r.x<0).length, avgD=rowsB.reduce((a,r)=>a+r.d,0)/rowsB.length;
+  $('#c3brandNote').textContent=`고강도 캡슐은 보통보다 개당 평균 ${won(avgD)} 비쌉니다. 그래도 ${rowsB.length}개 브랜드 중 ${cheaper}곳은 고강도 1개가 보통 2개보다 쌉니다. 강도 숫자의 기준은 브랜드마다 달라서, 같은 고강도라도 맛은 다를 수 있습니다.`;
+  $('#c3brands').innerHTML='<div class="brow hd"><span>브랜드</span><span>보통 1개</span><span>고강도 1개</span><span>고강도 추가 금액</span><span>고강도 1개 vs 보통 2개</span></div>'+
+    rowsB.map(r=>`<div class="brow ${r.b.id===S.sB?'me':''}"><span>${r.b.name}</span><span class="num">${won(r.n)}</span><span class="num">${won(r.s)}</span><span class="num">${sg(r.d)}${r.n?` (${r.d>=0?'+':'−'}${Math.abs(r.d/r.n*100).toFixed(0)}%)`:''}</span><span class="num ${r.x<0?'pos':r.x>0?'neg':''}">${r.x<0?'고강도가 '+won(-r.x)+' 저렴':r.x>0?'보통 2개가 '+won(r.x)+' 저렴':'동일'}</span></div>`).join('');
+  $('#c3mixH').textContent=`하루 캡슐 ${T}개 중 고강도를 몇 개 쓸까`;
+  const rows=[...Array(T+1)].map((_,h)=>({h,v:cost(T-h,h)})), base=rows[0].v, mxr=Math.max(...rows.map(r=>r.v),1);
+  $('#c3mix').innerHTML=rows.map(r=>`<div class="mrow ${r.h===S.sCaps?'me':''}"><span>고강도 ${r.h}개</span><span class="tr"><i style="width:${r.v/mxr*100}%"></i></span><span class="num">${won(r.v)}</span><span class="num hint">${r.h===0?'기준':'+'+won(r.v-base)}</span></div>`).join('');
+  save();
+}
+
+/* ---------- chart ---------- */
+function niceStep(x){const p=Math.pow(10,Math.floor(Math.log10(x))),f=x/p;return (f<=1?1:f<=2?2:f<=5?5:10)*p}
+function chart(mN,mC,start,pb){
+  const W=640,H=270,L=56,R=18,T=16,B=32;
+  const xMax=isFinite(pb)&&pb<=60?Math.max(12,Math.ceil(pb*1.5/6)*6):24;
+  const top=Math.max(start+mN*xMax,mC*xMax,1), step=niceStep(top/4), yMax=step*Math.ceil(top/step);
+  const X=m=>L+m/xMax*(W-L-R), Y=v=>H-B-v/yMax*(H-T-B);
+  let g='';
+  for(let v=0;v<=yMax+1;v+=step) g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L-8}" y="${Y(v)+4}" text-anchor="end">${v/10000}만</text>`;
+  const xs=xMax<=24?3:6;
+  for(let m=0;m<=xMax;m+=xs) g+=`<text x="${X(m)}" y="${H-10}" text-anchor="middle">${m}개월</text>`;
+  g+=`<polyline class="ln c" points="${X(0)},${Y(0)} ${X(xMax)},${Y(mC*xMax)}"/><polyline class="ln n" points="${X(0)},${Y(start)} ${X(xMax)},${Y(start+mN*xMax)}"/>`;
+  if(isFinite(pb)&&pb<=xMax){
+    const cx=X(pb),cy=Y(mC*pb),tx=clamp(cx,L+34,W-R-34);
+    g+=`<circle class="mk" cx="${cx}" cy="${cy}" r="5.5"/><text class="mt" x="${tx}" y="${cy-12}" text-anchor="middle">${pb.toFixed(1)}개월에 역전</text>`;
+  }
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="개월별 누적 지출 비교 그래프">${g}</svg>`;
+}
+
+/* ---------- init ---------- */
+ensureBrand();buildPriceTable();update();
+const h=(location.hash||'').slice(1);
+go(['calc','cafe','strength'].includes(h)?h:(['calc','cafe','strength'].includes(S.tab)?S.tab:'calc'),false);
+</script>
+</body>
+</html>
