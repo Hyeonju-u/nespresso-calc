@@ -92,7 +92,9 @@ h2{font-size:17px;margin:0 0 12px;font-weight:700}
 .brand[aria-pressed="true"]{border-color:var(--nes);background:var(--nes-soft)}
 
 /* results */
-.result{display:grid;gap:16px;margin-top:22px}
+.result{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:22px}
+.result>*,.wrap,.page{min-width:0}
+details>summary+*{margin-top:12px}
 .hero-num{background:var(--nes-soft);border-radius:16px;padding:22px clamp(16px,3vw,28px);display:grid;gap:14px}
 .hero-num .big{font-size:clamp(34px,8vw,52px);font-weight:800;line-height:1.1;letter-spacing:-.02em;color:var(--nes)}
 .hero-num .cap{font-size:13px;font-weight:700;color:var(--muted)}
@@ -289,18 +291,24 @@ section+section{margin-top:26px}
   <div class="panel"><div class="two">
     <div class="field"><label for="nId">보통으로 쓸 캡슐</label><select class="input" id="nId"></select></div>
     <div class="field"><label for="sId">진하게 쓸 캡슐</label><select class="input" id="sId"></select></div>
-    <div class="field"><span class="l">하루에 쓰는 보통 캡슐 수</span>
-      <div class="stepper" data-key="nCaps" data-min="0" data-max="12"><button data-d="-1" aria-label="줄이기">−</button><output></output><button data-d="1" aria-label="늘리기">+</button></div></div>
-    <div class="field"><span class="l">하루에 쓰는 진한 캡슐 수</span>
-      <div class="stepper" data-key="sCaps" data-min="0" data-max="12"><button data-d="-1" aria-label="줄이기">−</button><output></output><button data-d="1" aria-label="늘리기">+</button></div></div>
   </div></div>
 
   <div class="result">
-    <section><h2>내가 고른 개수로 한 달 쓰는 돈 (지출)</h2><div class="cards3" id="c3combo"></div></section>
-    <section><h2>캡슐 1개 가격 비교</h2><div class="cards3" id="c3cards"></div></section>
-    <div class="diff" id="c3diff"></div>
-    <section><h2>캡슐별로 보통용 캡슐과 얼마나 다를까</h2><p class="hint" id="c3note" style="margin:0 0 10px"></p><div class="btab" id="c3products"></div></section>
-    <section><h2 id="c3mixH"></h2><div class="mix" id="c3mix"></div></section>
+    <section><h2>한 잔 기준으로 비교</h2>
+      <div class="vs"><div class="side nes" id="c3L"></div><div class="side cafe" id="c3R"></div></div></section>
+    <div class="verdict" id="c3diff"><span class="t"></span><span class="d"></span></div>
+
+    <section><h2>하루에 몇 개 쓰면, 한 달 지출은?</h2>
+      <div class="panel"><div class="two">
+        <div class="field"><span class="l">하루에 쓰는 보통 캡슐 수</span>
+          <div class="stepper" data-key="nCaps" data-min="0" data-max="12"><button data-d="-1" aria-label="줄이기">−</button><output></output><button data-d="1" aria-label="늘리기">+</button></div></div>
+        <div class="field"><span class="l">하루에 쓰는 진한 캡슐 수</span>
+          <div class="stepper" data-key="sCaps" data-min="0" data-max="12"><button data-d="-1" aria-label="줄이기">−</button><output></output><button data-d="1" aria-label="늘리기">+</button></div></div>
+      </div></div>
+      <div class="cards3" id="c3combo" style="margin-top:14px"></div></section>
+
+    <details><summary id="c3mixH"></summary><div class="mix" id="c3mix"></div></details>
+    <details><summary>모든 캡슐을 보통용 캡슐과 비교한 표 보기</summary><p class="hint" id="c3note" style="margin:0 0 10px"></p><div class="btab" id="c3products"></div></details>
   </div>
 </div>
 
@@ -506,18 +514,19 @@ function update(typing){
     return ps.length?`<optgroup label="${BN[b]}">${ps.map(p=>`<option value="${p.id}">${p.name} (${tier(p.t)})</option>`).join('')}</optgroup>`:''}).join('');
   $('#nId').innerHTML=opts;$('#sId').innerHTML=opts;$('#nId').value=S.nId;$('#sId').value=S.sId;
   const N=prod(S.nId), SS=prod(S.sId), pn=unit(S.nId), ps=unit(S.sId);
-  $('#c3sub').textContent=`보통으로 쓸 캡슐과 진하게 쓸 캡슐을 직접 고르고, 하루 개수를 정하면 한 달 지출이 바로 바뀝니다. 한 달 ${S.days}일 기준이고, 마시는 날은 첫 탭에서 바꿀 수 있어요.`;
-  const sc=[[`${nm(N)} 1개`,pn],[`${nm(SS)} 1개`,ps],[`${nm(N)} 2개`,pn*2],[`${nm(SS)} 2개`,ps*2]];
-  $('#c3cards').innerHTML=sc.map(([t,c],i)=>`<div class="sc ${(i===1&&ps<=pn*2)||(i===2&&pn*2<ps)?'hl':''}"><span class="t">${t}</span><span class="p num">${won(c)}</span><span class="m num">한 달 ${cm}잔 기준 ${won(c*cm)}</span></div>`).join('');
+  $('#c3sub').textContent='고른 두 캡슐로 한 잔 기준 가격을 비교하고, 하루 개수를 정하면 한 달 지출까지 보여줍니다.';
   const d=ps-pn*2, md=Math.abs(d)*cm;
-  $('#c3diff').innerHTML=d===0?`${nm(SS)} 1개와 ${nm(N)} 2개의 값이 같습니다.`:
-    `<b>${d<0?nm(SS)+' 1개':nm(N)+' 2개'}</b>가 한 잔에 <b class="num">${won(Math.abs(d))}</b> 더 쌉니다. 한 달 ${cm}잔이면 <b class="num">${won(md)}</b>, 1년이면 <b class="num">${won(md*12)}</b> 차이입니다.`;
+  $('#c3L').innerHTML=`<span class="who">${nm(SS)} 1개</span><span class="amt num">${won(ps)}</span><span class="det num">한 달 ${cm}잔이면 ${won(ps*cm)}</span>`;
+  $('#c3R').innerHTML=`<span class="who">${nm(N)} 2개</span><span class="amt num">${won(pn*2)}</span><span class="det num">한 달 ${cm}잔이면 ${won(pn*2*cm)}</span>`;
+  const dv=$('#c3diff');dv.className='verdict '+(d===0?'flat':'good');
+  dv.children[0].textContent=d===0?'두 가지 값이 같아요':`${d<0?nm(SS)+' 1개':nm(N)+' 2개'}가 한 잔에 ${won(Math.abs(d))} 더 싸요`;
+  dv.children[1].textContent=d===0?'':`한 달 ${cm}잔이면 ${won(md)}, 1년이면 ${won(md*12)} 차이입니다. 한 달 잔 수는 첫 탭에서 고른 구성 기준입니다.`;
   const T=S.nCaps+S.sCaps, dm=S.days, sg=x=>(x>=0?'+':'−')+won(Math.abs(x));
   const cost=(a,b)=>dm*(a*pn+b*ps), allN=cost(T,0), allS=cost(0,T), mine=cost(S.nCaps,S.sCaps);
-  const dl=x=>x===allN?'기준':sg(x-allN);
+  const dl=(x,i)=>i===0?'기준 (전부 보통)':`전부 보통보다 ${sg(x-allN)} / 월`;
   $('#c3combo').innerHTML=T===0?'<p class="hint">위에서 캡슐 개수를 1개 이상 골라 주세요.</p>':[
     [`전부 ${nm(N)}`,`${T}개`,allN,false],[`전부 ${nm(SS)}`,`${T}개`,allS,false],['내 조합',`${nm(N)} ${S.nCaps}개 + ${nm(SS)} ${S.sCaps}개`,mine,true]
-  ].map(([t,sub,x,me])=>`<div class="sc ${me?'hl':''}"><span class="t">${t}</span><span class="p num">${won(x)}</span><span class="m">하루 ${sub} · 한 달 ${dm}일</span><span class="m num">전부 보통 대비 ${dl(x)} / 월</span></div>`).join('');
+  ].map(([t,sub,x,me],i)=>`<div class="sc ${me?'hl':''}"><span class="t">${t}</span><span class="p num">${won(x)}</span><span class="m">하루 ${sub} · 한 달 ${dm}일</span><span class="m num">${dl(x,i)}</span></div>`).join('');
   const strongs=vis.filter(p=>p.t==='s'), cheaper=strongs.filter(p=>unit(p.id)<2*pn).length;
   const avgD=strongs.length?strongs.reduce((a,p)=>a+unit(p.id)-pn,0)/strongs.length:0;
   $('#c3note').textContent=strongs.length?`진한 편 캡슐 ${strongs.length}종은 '${nm(N)}'보다 개당 평균 ${won(Math.abs(avgD))} ${avgD>=0?'비쌉니다':'쌉니다'}. 그중 ${cheaper}종은 1개가 '${nm(N)}' 2개보다 쌉니다. 진한 편 구분은 로스트 특성에 따른 추정이라 같은 진한 캡슐이라도 맛은 다를 수 있습니다.`:'이 머신 라인에는 진한 편으로 구분한 캡슐이 없습니다.';
