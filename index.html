@@ -305,6 +305,8 @@ section+section{margin-top:26px}
 </div>
 
 <p class="note">캡슐 가격은 10개입 기준입니다. 폴바셋(마켓컬리), 스타벅스 하우스 블렌드, 일리 Intenso는 2026년 하반기에 쇼핑몰이나 가격 비교 사이트에서 확인한 값이고, 나머지는 같은 브랜드의 비슷한 상품 가격으로 가정한 예상가입니다. 카페 음료 가격도 예상가입니다. 판매처와 시기에 따라 다르니 직접 입력한 가격이 기준입니다. 맛 설명과 '진한 편' 구분은 일반적인 로스트 특성에 따른 추정입니다. 폴바셋·모모스·스타벅스·일리는 네스프레소 정품이 아닌 오리지널 머신용 호환 캡슐이라 버츄오에서는 쓸 수 없습니다. 머신 감가, 전기, 석회 제거 비용, 우유·시럽 같은 추가 재료비는 계산에 넣지 않았습니다.</p>
+<p class="hint" id="usedCount" hidden></p>
+<p class="hint">방문 통계는 쿠키 없이 GoatCounter로 집계하며, 입력한 캡슐·가격 같은 값은 전송하지 않습니다.</p>
 </div></main>
 
 <script>
@@ -405,7 +407,11 @@ function verdict(saving,payback,owned){
 
 /* ---------- controls ---------- */
 function parseV(v){return v==='true'?true:v==='false'?false:isNaN(v)?v:Number(v)}
+/* 방문 통계(GoatCounter, 쿠키 없음). 입력값은 보내지 않고 사건 이름만 센다. */
+const track=n=>{try{window.goatcounter&&window.goatcounter.count&&window.goatcounter.count({path:'event/'+n,title:n,event:true})}catch(e){}};
+let used=false;
 document.addEventListener('click',e=>{
+  if(!used&&e.target.closest('.pc-main,.mini button,.seg button,.stepper button')){used=true;track('use')}
   const sb=e.target.closest('.seg button');
   if(sb){const k=sb.parentNode.dataset.key;S[k]=parseV(sb.dataset.v);
     if(k==='line'){fixLine();buildPriceTable()} update();return}
@@ -587,6 +593,7 @@ async function makeImage(){
 }
 document.addEventListener('click',async e=>{
   const b=e.target.closest('[data-sh],[data-load],[data-del]');if(!b)return;
+  if(b.dataset.sh)track('share-'+b.dataset.sh);
   if(b.dataset.sh==='link'){msg(await copyText(shareUrl())?'링크를 복사했어요. 붙여넣어 보내면 같은 계산이 열립니다.':'복사하지 못했어요. 주소창의 링크를 직접 복사해 주세요.')}
   else if(b.dataset.sh==='img'||b.dataset.sh==='share'){
     if(!LAST){msg('계산 결과가 아직 없어요.');return}
@@ -611,9 +618,15 @@ document.addEventListener('click',async e=>{
 });
 
 /* ---------- init ---------- */
+/* 공개 집계 숫자는 일정 수 이상 쌓였을 때만 보여준다. 가져오지 못하면 조용히 숨긴다. */
+fetch('https://hyeonju.goatcounter.com/counter/event/use.json').then(r=>r.ok?r.json():null).then(j=>{
+  const n=j&&parseInt(String(j.count_unique||j.count).replace(/\D/g,''),10);
+  if(n>=50){const el=$('#usedCount');el.textContent=`지금까지 ${n.toLocaleString('ko-KR')}명이 계산해 봤어요`;el.hidden=false}
+}).catch(()=>{});
 fixLine();buildPriceTable();update();renderShare();if(sharedIn)msg('공유받은 계산을 불러왔어요.');
 const h=(location.hash||'').slice(1);
 go(['calc','cafe','strength'].includes(h)?h:(['calc','cafe','strength'].includes(S.tab)?S.tab:'calc'),false);
 </script>
+<script data-goatcounter="https://hyeonju.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </body>
 </html>
