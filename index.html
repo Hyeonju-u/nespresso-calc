@@ -171,6 +171,11 @@ select.input{appearance:auto}
 .pick-sum{background:var(--field);border-radius:10px;padding:10px 14px;font-size:14px;margin:0 0 4px}
 .src{font-size:11px;color:var(--muted);margin-left:6px}
 .src.ok{color:var(--good);font-weight:700}
+.drinks{display:grid;gap:10px}
+.drow{display:grid;grid-template-columns:minmax(90px,1.3fr) 110px 150px auto;gap:8px;align-items:center}
+.drow .input{padding:8px 10px}
+.drow .mini{background:var(--field)}
+@media (max-width:560px){.drow{grid-template-columns:1fr 1fr}.drow .mini,.drow .btn{grid-column:span 1}}
 .bname{font-size:13px;font-weight:700;color:var(--muted);margin:16px 0 8px}
 .pgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 .pc{border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;display:grid;gap:8px;background:var(--surface);min-width:0;align-content:start}
@@ -263,9 +268,10 @@ section+section{margin-top:26px}
   </div>
   <div class="panel"><div class="grid">
     <div class="field" style="grid-column:1/-1"><span class="l">자주 가는 카페</span><div class="chips" id="cafes"></div></div>
-    <div class="field"><label for="cafePrice">그 카페에서 내가 마시는 음료 가격 (원)</label>
-      <input class="input num" id="cafePrice" type="number" inputmode="numeric" min="0" step="100"></div>
-    <div class="field"><span class="l">비교 기준</span><div class="hint" id="c2basis" style="line-height:1.7"></div></div>
+    <div class="field" style="grid-column:1/-1"><span class="l">카페에서 마시는 음료 (가격과 일주일에 몇 잔)</span>
+      <div id="drinks" class="drinks"></div>
+      <div><button class="btn" id="addDrink" type="button">+ 음료 추가</button></div></div>
+    <div class="field" style="grid-column:1/-1"><span class="l">비교 기준</span><div class="hint" id="c2basis" style="line-height:1.7"></div></div>
   </div></div>
 
   <div class="result">
@@ -277,7 +283,7 @@ section+section{margin-top:26px}
     <section><h2 id="c2chartH"></h2>
       <div class="legend"><span><i style="background:var(--cafe)"></i>카페</span><span><i style="background:var(--nes)"></i>네소프레소</span></div>
       <div class="chartbox" id="c2chart"></div></section>
-    <section><h2>다른 카페였다면 한 달에 얼마나 남을까</h2><div class="others" id="c2others"></div></section>
+    <section><h2>다른 카페였다면 (아메리카노 가격 기준)</h2><div class="others" id="c2others"></div></section>
     <section class="sharebox"></section>
   </div>
 </div>
@@ -330,8 +336,11 @@ const PRODUCTS=[
   {id:'paul-col',b:'paul',name:'콜롬비아 싱글 오리진',  note:'부드러운 단맛과 균형',            t:'n', p:8200,  v:1, l:'original'},
   {id:'paul-gua',b:'paul',name:'과테말라 싱글 오리진',  note:'초콜릿·견과 느낌의 묵직함',        t:'n', p:8200,  v:1, l:'original'},
   {id:'paul-bra',b:'paul',name:'브라질 싱글 오리진',    note:'고소하고 산미가 낮은 편',         t:'n', p:8200,  v:1, l:'original'},
-  {id:'momo-house',b:'momo',name:'하우스 블렌드',   note:'균형 잡힌 기본 맛',                 t:'n', p:10420, l:'original'},
-  {id:'momo-orig', b:'momo',name:'오리지널 블렌드', note:'하우스 블렌드와 함께 팔리는 기본 블렌드',t:'n', p:10420, l:'original'},
+  {id:'momo-bus',  b:'momo',name:'부산',         note:'볶은 견과류, 웰 밸런스. 부드러운 단맛 · 중배전',   t:'n', p:10420, l:'original'},
+  {id:'momo-esc',  b:'momo',name:'에스쇼콜라',   note:'밀크 초콜릿, 크리미한 촉감 · 중강배전',           t:'s', p:10420, l:'original'},
+  {id:'momo-mcho', b:'momo',name:'므쵸베리',     note:'믹스베리, 체리, 초콜릿 · 중배전',                 t:'n', p:10420, v:1, l:'original'},
+  {id:'momo-decaf',b:'momo',name:'디카페인',     note:'자몽, 다크 초콜릿. 카페인 제거 · 중강배전',        t:'s', p:10420, l:'original'},
+  {id:'momo-fruity',b:'momo',name:'프루티봉봉',  note:'상세 설명은 아직 확인하지 못했어요',               t:'n', p:10420, l:'original'},
   {id:'sbx-bre',b:'sbx',name:'브렉퍼스트 블렌드',   note:'가볍고 부드러운 아침용',   t:'n', p:6780, l:'original'},
   {id:'sbx-house',b:'sbx',name:'하우스 블렌드',     note:'중간 로스트, 무난한 맛',   t:'n', p:6780, v:1, l:'original'},
   {id:'sbx-col',b:'sbx',name:'콜롬비아 싱글 오리진',note:'깔끔한 산미와 단맛',       t:'n', p:6780, l:'original'},
@@ -361,7 +370,7 @@ const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const tier=t=>t==='s'?'진한 편':'보통·순한 편';
 
 const S={owned:false,line:'original',perCup:1,days:30,machine:150000,picks:{},price:{},
-  cafe:'sbx',C:Object.fromEntries(CAFES.map(c=>[c.id,c.price])),nId:'sbx-house',sId:'sbx-esp',nCaps:2,sCaps:2,tab:'calc'};
+  drinks:[{name:'아메리카노',price:4700,perWeek:5,d:true}],cafe:'sbx',C:Object.fromEntries(CAFES.map(c=>[c.id,c.price])),nId:'sbx-house',sId:'sbx-esp',nCaps:2,sCaps:2,tab:'calc'};
 let LAST=null;
 /* 저장값·공유 링크로 들어온 값은 신뢰하지 않고 허용된 키와 범위만 받아들인다 */
 function clean(o){
@@ -372,13 +381,14 @@ function clean(o){
   for(const [k,a,b] of [['perCup',1,3],['days',1,31],['machine',0,5e6],['nCaps',0,12],['sCaps',0,12]]){const v=num(o[k],a,b);if(v!==undefined)r[k]=v}
   if(o.picks&&typeof o.picks==='object')r.picks=Object.fromEntries(Object.entries(o.picks).filter(([id,c])=>pid(id)&&num(c,0,10)>0).map(([id,c])=>[id,num(c,1,10)]));
   if(o.price&&typeof o.price==='object')r.price=Object.fromEntries(Object.entries(o.price).filter(([id,v])=>pid(id)&&num(v,0,1e6)!==undefined).map(([id,v])=>[id,num(v,0,1e6)]));
+  if(Array.isArray(o.drinks)){const ds=o.drinks.slice(0,8).map(d=>({name:String(d&&d.name||'').slice(0,12),price:num(d&&d.price,0,1e5)??0,perWeek:num(d&&d.perWeek,0,30)??0,d:!!(d&&d.d)})).filter(d=>d.name||d.price);if(ds.length)r.drinks=ds}
   if(CAFES.some(c=>c.id===o.cafe))r.cafe=o.cafe;
   if(o.C&&typeof o.C==='object')r.C=Object.fromEntries(CAFES.filter(c=>num(o.C[c.id],0,1e5)!==undefined).map(c=>[c.id,num(o.C[c.id],0,1e5)]));
   if(pid(o.nId))r.nId=o.nId; if(pid(o.sId))r.sId=o.sId;
   if(['calc','cafe','strength'].includes(o.tab))r.tab=o.tab;
   return r;
 }
-const KEYS=['owned','line','perCup','days','machine','picks','price','cafe','C','nId','sId','nCaps','sCaps'];
+const KEYS=['owned','line','perCup','days','machine','picks','price','drinks','cafe','C','nId','sId','nCaps','sCaps'];
 function applyState(r){if(r.C)r.C={...S.C,...r.C};Object.assign(S,r)}
 const b64e=s=>btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const b64d=s=>atob(s.replace(/-/g,'+').replace(/_/g,'/'));
@@ -442,12 +452,29 @@ function go(t,push){
   save();
 }
 $('#machine').addEventListener('input',e=>{S.machine=Math.max(0,Number(e.target.value)||0);update(true)});
-$('#cafePrice').addEventListener('input',e=>{S.C[S.cafe]=Math.max(0,Number(e.target.value)||0);update(true)});
 $('#nId').addEventListener('change',e=>{S.nId=e.target.value;update()});
 $('#sId').addEventListener('change',e=>{S.sId=e.target.value;update()});
 $('#machinePresets').innerHTML=MACHINES.map(m=>`<button class="chip" data-m="${m.v}">${m.n} ${man(m.v)}</button>`).join('');
 $('#machinePresets').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b){S.machine=Number(b.dataset.m);update()}});
-$('#cafes').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(b){S.cafe=b.dataset.c;update()}});
+$('#cafes').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(b){S.cafe=b.dataset.c;S.drinks.forEach(d=>{if(d.d)d.price=S.C[S.cafe]});renderDrinks();update()}});
+const WK=52/12, esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function renderDrinks(){
+  $('#drinks').innerHTML=S.drinks.map((d,i)=>`<div class="drow" data-i="${i}"><input class="input" data-f="name" maxlength="12" value="${esc(d.name)}" aria-label="음료 이름">
+    <input class="input num" data-f="price" type="number" inputmode="numeric" min="0" step="100" value="${d.price}" aria-label="${esc(d.name)} 가격(원)">
+    <div class="mini"><button type="button" data-dr="dec" aria-label="줄이기">−</button><output>주 ${d.perWeek}잔</output><button type="button" data-dr="inc" aria-label="늘리기">+</button></div>
+    ${S.drinks.length>1?'<button class="btn" type="button" data-dr="del">삭제</button>':'<span></span>'}</div>`).join('');
+}
+$('#drinks').addEventListener('input',e=>{
+  const i=e.target.closest('.drow'),f=e.target.dataset.f;if(!i||!f)return;const d=S.drinks[+i.dataset.i];
+  if(f==='name')d.name=e.target.value.slice(0,12);else{d.price=clamp(Math.round(Number(e.target.value)||0),0,1e5);d.d=false}
+  update(true);
+});
+$('#drinks').addEventListener('click',e=>{
+  const b=e.target.closest('[data-dr]');if(!b)return;const i=+b.closest('.drow').dataset.i,d=S.drinks[i];
+  if(b.dataset.dr==='del')S.drinks.splice(i,1);else d.perWeek=clamp(d.perWeek+(b.dataset.dr==='inc'?1:-1),0,30);
+  renderDrinks();update();
+});
+$('#addDrink').addEventListener('click',()=>{if(S.drinks.length<8){S.drinks.push({name:'라떼',price:S.C[S.cafe]+500,perWeek:2,d:false});renderDrinks();update()}});
 
 function buildPriceTable(){
   $('#ptable').innerHTML=visible().map(p=>`<div class="pt-row"><span>${nm(p)}</span>
@@ -469,7 +496,7 @@ function update(typing){
   $$('.stepper').forEach(g=>{const k=g.dataset.key,u={perCup:'개',days:'일',nCaps:'개',sCaps:'개'}[k];
     g.querySelector('output').innerHTML=`${S[k]}<small>${u}</small>`});
   $('#machineField').hidden=S.owned;
-  if(!typing){$('#machine').value=S.machine;$('#cafePrice').value=S.C[S.cafe]}
+  if(!typing){$('#machine').value=S.machine}
   const vis=visible();
   $('#lineWarn').hidden=S.line!=='vertuo';
   $('#lineWarn').textContent='버츄오는 정품 캡슐만 쓸 수 있어서 폴바셋·모모스·스타벅스·일리 호환 캡슐은 목록에서 빠집니다.';
@@ -493,21 +520,23 @@ function update(typing){
   $('#r1bars').innerHTML=rows.map(x=>`<div class="bar ${x.me?'me':''}"><span class="nm">${x.name}</span><span class="tr"><i style="width:${x.v/mx*100}%"></i></span><span class="val num">${won(x.v)}</span></div>`).join('');
 
   /* tab 2 */
-  const cafe=CAFES.find(c=>c.id===S.cafe), cp=S.C[S.cafe], cMon=cm*cp, saving=cMon-mc;
+  const cafe=CAFES.find(c=>c.id===S.cafe), perCup=cm?mc/cm:0;
+  const wk=S.drinks.reduce((a,d)=>a+d.perWeek,0), M=wk*WK, Mt=Math.round(M);
+  const cafeMon=S.drinks.reduce((a,d)=>a+d.price*d.perWeek,0)*WK, nesMon=M*perCup, saving=cafeMon-nesMon;
   const payback=!S.owned&&saving>0?S.machine/saving:Infinity;
   $('#cafes').innerHTML=CAFES.map(c=>`<button class="chip" data-c="${c.id}" aria-pressed="${c.id===S.cafe}">${c.name}</button>`).join('');
-  $('#c2sub').textContent=`첫 탭에서 고른 캡슐 ${picked}종 기준입니다. 같은 횟수만큼 카페에서 사 마셨다면 어떻게 달라지는지 봅니다.`;
-  $('#c2basis').innerHTML=`하루 ${n}잔 (${mixTxt||'-'}) × 한 달 ${S.days}일 = <b class="num">${cm}잔</b><br>${S.owned?'이미 가진 머신이라 머신값은 제외':'머신 '+won(S.machine)+' 포함'}`;
-  $('#c2nWho').textContent='네소프레소 캡슐 (내가 고른 구성)'; $('#c2nAmt').textContent=won(mc);
-  $('#c2nDet').textContent=`한 달 ${cm}잔 · 한 잔 ${won(cm?mc/cm:0)}`;
-  $('#c2cWho').textContent=/카페$/.test(cafe.name)?cafe.name:`${cafe.name} 카페`; $('#c2cAmt').textContent=won(cMon);
-  $('#c2cDet').textContent=`한 달 ${cm}잔 · 한 잔 ${won(cp)}`;
+  $('#c2sub').textContent=`카페에서 마시는 음료를 일주일 기준으로 적으면, 같은 잔 수를 집에서 고른 캡슐 ${picked}종으로 마셨을 때와 비교합니다.`;
+  $('#c2basis').innerHTML=wk?`카페 주 <b class="num">${wk}잔</b> × 한 달 약 4.3주 = 월 약 <b class="num">${Mt}잔</b>, 한 달 <b class="num">${won(cafeMon)}</b><br>집에서는 한 잔 평균 <b class="num">${won(perCup)}</b> (첫 탭에서 고른 구성) · ${S.owned?'이미 가진 머신이라 머신값 제외':'머신 '+won(S.machine)+' 포함'}`:'음료와 일주일에 몇 잔 마시는지 입력해 주세요.';
+  $('#c2nWho').textContent='집에서 네소프레소 캡슐 (고른 구성)'; $('#c2nAmt').textContent=won(nesMon);
+  $('#c2nDet').textContent=`월 약 ${Mt}잔 · 한 잔 평균 ${won(perCup)}`;
+  $('#c2cWho').textContent=/카페$/.test(cafe.name)?cafe.name:`${cafe.name} 카페`; $('#c2cAmt').textContent=won(cafeMon);
+  $('#c2cDet').textContent=`월 약 ${Mt}잔 · 한 잔 평균 ${won(M?cafeMon/M:0)}`;
   const v=verdict(saving,payback,S.owned), vb=$('#c2verdict');
-  LAST={n,cm,mc,cafe,cp,cMon,saving,payback,v};
+  LAST={n,cm,mc,perCup,M,cafe,cafeMon,nesMon,saving,payback,v};
   vb.className='verdict '+v.tone; vb.children[0].textContent=v.title; vb.children[1].textContent=v.desc+(saving>0?` 1년이면 ${won(saving*12-(S.owned?0:S.machine))} 남습니다${S.owned?'':' (머신값 제외 후)'}.`:'');
   $('#c2chartH').textContent=S.owned?'누적 지출 비교':'머신값을 포함한 누적 지출 비교';
-  $('#c2chart').innerHTML=chart(mc,cMon,S.owned?0:S.machine,payback);
-  $('#c2others').innerHTML=CAFES.map(c=>{const s=cm*S.C[c.id]-mc;return `<div class="orow"><span>${c.name} <span class="num hint">${won(S.C[c.id])}</span></span><span class="num ${s>0?'pos':'neg'}">${s>0?'+':'−'}${won(Math.abs(s))} / 월</span></div>`}).join('');
+  $('#c2chart').innerHTML=chart(nesMon,cafeMon,S.owned?0:S.machine,payback);
+  $('#c2others').innerHTML=CAFES.map(c=>{const x=M*S.C[c.id]-nesMon;return `<div class="orow"><span>${c.name} <span class="num hint">${won(S.C[c.id])}</span></span><span class="num ${x>0?'pos':'neg'}">${x>0?'+':'−'}${won(Math.abs(x))} / 월</span></div>`}).join('');
 
   /* tab 3 */
   const opts=Object.keys(BN).map(b=>{const ps=vis.filter(p=>p.b===b);
@@ -587,16 +616,16 @@ async function makeImage(){
   Object.entries(S.picks).slice(0,5).forEach(([id,k])=>{x.fillText(`${nm(prod(id))} · 하루 ${k}잔`,64,y);y+=48});
   y=Math.max(y,430)+10;
   x.fillStyle='#e3f3f5';x.beginPath();x.roundRect(64,y,W-128,200,24);x.fill();
-  x.fillStyle='#0b7285';x.font=`700 30px ${F}`;x.fillText('한 달 캡슐값 (지출)',96,y+56);x.font=`800 84px ${F}`;x.fillText(won(L.mc),96,y+156);
+  x.fillStyle='#0b7285';x.font=`700 30px ${F}`;x.fillText(`집에서 마시면 한 달 (월 약 ${Math.round(L.M)}잔)`,96,y+56);x.font=`800 84px ${F}`;x.fillText(won(L.nesMon),96,y+156);
   y+=224;
   x.fillStyle='#fbf1de';x.beginPath();x.roundRect(64,y,W-128,200,24);x.fill();
-  x.fillStyle='#b7791f';x.font=`700 30px ${F}`;x.fillText(`${L.cafe.name}에서 마시면 (한 잔 ${won(L.cp)})`,96,y+56);x.font=`800 84px ${F}`;x.fillText(won(L.cMon),96,y+156);
+  x.fillStyle='#b7791f';x.font=`700 30px ${F}`;x.fillText(`${L.cafe.name}에서 마시면 (월 약 ${Math.round(L.M)}잔)`,96,y+56);x.font=`800 84px ${F}`;x.fillText(won(L.cafeMon),96,y+156);
   y+=270;
   x.fillStyle=L.saving>0?'#1e8a4c':'#c2410c';
   wrap(L.v.title,W-128,`800 52px ${F}`).forEach(t=>{x.font=`800 52px ${F}`;x.fillText(t,64,y);y+=66});
   y+=6;x.fillStyle='#5d6675';
   wrap(L.v.desc,W-128,`500 32px ${F}`).forEach(t=>{x.font=`500 32px ${F}`;x.fillText(t,64,y);y+=46});
-  x.fillStyle='#8a93a1';x.font=`500 26px ${F}`;x.fillText(`한 달 ${S.days}일 · 하루 ${L.n}잔 · 예상가 기준`,64,H-90);
+  x.fillStyle='#8a93a1';x.font=`500 26px ${F}`;x.fillText(`카페 주 ${Math.round(L.M/WK)}잔 · 예상가 기준`,64,H-90);
   x.fillText(location.host+location.pathname,64,H-48);
   return new Promise(r=>c.toBlob(r,'image/png'));
 }
@@ -609,7 +638,7 @@ document.addEventListener('click',async e=>{
     try{
       const blob=await makeImage(), file=new File([blob],'nespresso-calc.png',{type:'image/png'});
       if(b.dataset.sh==='share'){
-        const data={title:'네소프레소 절약 계산기',text:`한 달 캡슐값 ${won(LAST.mc)} · ${LAST.v.title}`,url:shareUrl()};
+        const data={title:'네소프레소 절약 계산기',text:`집에서 한 달 ${won(LAST.nesMon)} · ${LAST.v.title}`,url:shareUrl()};
         if(navigator.canShare&&navigator.canShare({files:[file]}))data.files=[file];
         try{await navigator.share(data)}catch(err){if(err&&err.name!=='AbortError')msg('공유하지 못했어요.')}
       }else{
@@ -619,10 +648,10 @@ document.addEventListener('click',async e=>{
   }
   else if(b.dataset.sh==='save'){
     if(!LAST)return;const a=getSaves();
-    const d=new Date(), label=`${d.getMonth()+1}/${d.getDate()} · 하루 ${LAST.n}잔 · 월 ${won(LAST.mc)} · ${LAST.cafe.name} 대비 ${LAST.saving>0?'+':'−'}${won(Math.abs(LAST.saving))}`;
+    const d=new Date(), label=`${d.getMonth()+1}/${d.getDate()} · 주 ${Math.round(LAST.M/WK)}잔 · 월 ${won(LAST.nesMon)} · ${LAST.cafe.name} 대비 ${LAST.saving>0?'+':'−'}${won(Math.abs(LAST.saving))}`;
     a.unshift({label,s:snap()});putSaves(a);renderShare();msg('이 브라우저에 저장했어요.');
   }
-  else if(b.dataset.load!==undefined){const x=getSaves()[+b.dataset.load];if(x){applyState(clean(x.s));fixLine();buildPriceTable();update();msg('저장한 계산을 불러왔어요.')}}
+  else if(b.dataset.load!==undefined){const x=getSaves()[+b.dataset.load];if(x){applyState(clean(x.s));fixLine();buildPriceTable();renderDrinks();update();msg('저장한 계산을 불러왔어요.')}}
   else if(b.dataset.del!==undefined){const a=getSaves();a.splice(+b.dataset.del,1);putSaves(a);renderShare()}
 });
 
@@ -632,7 +661,7 @@ fetch('https://hyeonju.goatcounter.com/counter/event/use.json').then(r=>r.ok?r.j
   const n=j&&parseInt(String(j.count_unique||j.count).replace(/\D/g,''),10);
   if(n>=50){const el=$('#usedCount');el.textContent=`지금까지 ${n.toLocaleString('ko-KR')}명이 계산해 봤어요`;el.hidden=false}
 }).catch(()=>{});
-fixLine();buildPriceTable();update();renderShare();if(sharedIn)msg('공유받은 계산을 불러왔어요.');
+fixLine();buildPriceTable();renderDrinks();update();renderShare();if(sharedIn)msg('공유받은 계산을 불러왔어요.');
 const h=(location.hash||'').slice(1);
 go(['calc','cafe','strength'].includes(h)?h:(['calc','cafe','strength'].includes(S.tab)?S.tab:'calc'),false);
 </script>
