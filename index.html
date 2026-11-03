@@ -67,7 +67,7 @@ h2{font-size:17px;margin:0 0 12px;font-weight:700}
 /* controls */
 .panel{border:1px solid var(--line);border-radius:14px;padding:18px;background:var(--surface)}
 .grid{display:grid;gap:18px 24px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
-.field{display:grid;gap:7px;min-width:0}
+.field{display:grid;gap:7px;min-width:0;align-content:start}
 .field>label,.field>.l{font-size:13px;font-weight:700;color:var(--muted)}
 .seg{display:flex;background:var(--field);border-radius:10px;padding:3px;gap:3px}
 .seg button{flex:1;border:0;background:transparent;border-radius:8px;padding:8px 6px;font-size:14px;font-weight:500;color:var(--muted)}
@@ -159,6 +159,16 @@ svg.chart{width:100%;min-width:420px;height:auto;display:block}
 .mrow>span:nth-child(3),.mrow>span:nth-child(4){text-align:right}
 .two{display:grid;gap:14px 20px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 select.input{appearance:auto}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;font-weight:700;font-size:14px}
+.btn:hover{background:var(--field)}
+.btn.pri{background:var(--fg);color:var(--surface);border-color:var(--fg)}
+.sharebox{border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:12px}
+.sharebox h2{margin:0}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.sh-msg{min-height:20px}
+.pick-sum{background:var(--field);border-radius:10px;padding:10px 14px;font-size:14px;margin:0 0 4px}
+.src{font-size:11px;color:var(--muted);margin-left:6px}
+.src.ok{color:var(--good);font-weight:700}
 .bname{font-size:13px;font-weight:700;color:var(--muted);margin:16px 0 8px}
 .pgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 .pc{border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;display:grid;gap:8px;background:var(--surface);min-width:0;align-content:start}
@@ -227,6 +237,7 @@ section+section{margin-top:26px}
   <section><h2>마시는 캡슐 고르기</h2>
     <p class="hint">캡슐을 누르면 선택되고, 그 캡슐로 하루에 몇 잔 마시는지 정할 수 있어요. 여러 종류를 섞어도 됩니다. 가격은 10개입 기준 예상가입니다.</p>
     <div id="lineWarn" class="warn" hidden></div>
+    <p class="pick-sum" id="pickSum"></p>
     <div id="products"></div></section>
 
   <div class="result">
@@ -235,6 +246,7 @@ section+section{margin-top:26px}
       <div class="facts" id="r1facts"></div>
     </div>
     <section><h2>한 가지 캡슐로만 마신다면</h2><div class="bars" id="r1bars"></div></section>
+    <section class="sharebox"></section>
     <details><summary>캡슐 가격 직접 고치기 (10개입 기준, 원)</summary>
       <p class="hint">여기 가격은 예상가입니다. 실제로 사는 가격으로 바꾸면 모든 탭이 같이 바뀝니다.</p>
       <div class="ptable" id="ptable"></div></details>
@@ -264,6 +276,7 @@ section+section{margin-top:26px}
       <div class="legend"><span><i style="background:var(--cafe)"></i>카페</span><span><i style="background:var(--nes)"></i>네소프레소</span></div>
       <div class="chartbox" id="c2chart"></div></section>
     <section><h2>다른 카페였다면 한 달에 얼마나 남을까</h2><div class="others" id="c2others"></div></section>
+    <section class="sharebox"></section>
   </div>
 </div>
 
@@ -291,32 +304,32 @@ section+section{margin-top:26px}
   </div>
 </div>
 
-<p class="note">캡슐·카페 가격은 확인된 정가가 아니라 10개입 기준으로 추정한 예상가입니다. 판매처와 시기에 따라 다르니 직접 입력한 가격이 기준입니다. 맛 설명과 '진한 편' 구분은 일반적인 로스트 특성에 따른 추정입니다. 폴바셋·모모스·스타벅스·일리는 네스프레소 정품이 아닌 오리지널 머신용 호환 캡슐이라 버츄오에서는 쓸 수 없습니다. 머신 감가, 전기, 석회 제거 비용, 우유·시럽 같은 추가 재료비는 계산에 넣지 않았습니다.</p>
+<p class="note">캡슐 가격은 10개입 기준입니다. 폴바셋(마켓컬리), 스타벅스 하우스 블렌드, 일리 Intenso는 2026년 하반기에 쇼핑몰이나 가격 비교 사이트에서 확인한 값이고, 나머지는 같은 브랜드의 비슷한 상품 가격으로 가정한 예상가입니다. 카페 음료 가격도 예상가입니다. 판매처와 시기에 따라 다르니 직접 입력한 가격이 기준입니다. 맛 설명과 '진한 편' 구분은 일반적인 로스트 특성에 따른 추정입니다. 폴바셋·모모스·스타벅스·일리는 네스프레소 정품이 아닌 오리지널 머신용 호환 캡슐이라 버츄오에서는 쓸 수 없습니다. 머신 감가, 전기, 석회 제거 비용, 우유·시럽 같은 추가 재료비는 계산에 넣지 않았습니다.</p>
 </div></main>
 
 <script>
 /* ---------- data: 10개입 기준 예상가(원). t: 'n' 보통·순한 편, 's' 진한 편. 호환 캡슐은 오리지널 전용 ---------- */
 const BN={nes:'네스프레소 정품',paul:'폴바셋',momo:'모모스',sbx:'스타벅스',illy:'일리'};
 const PRODUCTS=[
-  {id:'nes-n', b:'nes', name:'보통 강도 (대표값)', note:'정품 오리지널 평균', t:'n', p:8500,  l:'original'},
-  {id:'nes-s', b:'nes', name:'고강도 (대표값)',   note:'정품 오리지널 평균', t:'s', p:9000,  l:'original'},
-  {id:'nes-vn',b:'nes', name:'보통 강도 (대표값)', note:'정품 버츄오 평균',   t:'n', p:14000, l:'vertuo'},
-  {id:'nes-vs',b:'nes', name:'고강도 (대표값)',   note:'정품 버츄오 평균',   t:'s', p:15000, l:'vertuo'},
-  {id:'paul-sig',b:'paul',name:'Signature 블렌드',     note:'균형 잡힌 기본 블렌드',           t:'n', p:8500,  l:'original'},
-  {id:'paul-eth',b:'paul',name:'에티오피아 싱글 오리진',note:'꽃·과일 향과 산미가 도드라지는 편',t:'n', p:9500,  l:'original'},
-  {id:'paul-col',b:'paul',name:'콜롬비아 싱글 오리진',  note:'부드러운 단맛과 균형',            t:'n', p:9500,  l:'original'},
-  {id:'paul-gua',b:'paul',name:'과테말라 싱글 오리진',  note:'초콜릿·견과 느낌의 묵직함',        t:'n', p:9500,  l:'original'},
-  {id:'paul-bra',b:'paul',name:'브라질 싱글 오리진',    note:'고소하고 산미가 낮은 편',         t:'n', p:9500,  l:'original'},
-  {id:'momo-house',b:'momo',name:'하우스 블렌드',   note:'균형 잡힌 기본 맛',                 t:'n', p:10400, l:'original'},
-  {id:'momo-orig', b:'momo',name:'오리지널 블렌드', note:'하우스 블렌드와 함께 팔리는 기본 블렌드',t:'n', p:10400, l:'original'},
-  {id:'sbx-bre',b:'sbx',name:'브렉퍼스트 블렌드',   note:'가볍고 부드러운 아침용',   t:'n', p:7800, l:'original'},
-  {id:'sbx-house',b:'sbx',name:'하우스 블렌드',     note:'중간 로스트, 무난한 맛',   t:'n', p:7800, l:'original'},
-  {id:'sbx-col',b:'sbx',name:'콜롬비아 싱글 오리진',note:'깔끔한 산미와 단맛',       t:'n', p:7800, l:'original'},
-  {id:'sbx-esp',b:'sbx',name:'에스프레소 로스트',   note:'진한 다크 로스트',         t:'s', p:7800, l:'original'},
-  {id:'sbx-ita',b:'sbx',name:'이탈리안 로스트',     note:'가장 진한 다크 로스트',    t:'s', p:7800, l:'original'},
-  {id:'illy-cla',b:'illy',name:'Classico', note:'순하고 부드러운 로스트',     t:'n', p:7500, l:'original'},
-  {id:'illy-int',b:'illy',name:'Intenso',  note:'진하고 묵직한 바디',         t:'s', p:7800, l:'original'},
-  {id:'illy-for',b:'illy',name:'Forte',    note:'일리 중 가장 강한 로스트',   t:'s', p:7800, l:'original'},
+  {id:'nes-n', b:'nes', name:'보통 강도 (대표값)', note:'정품 오리지널 평균', t:'n', p:7500,  l:'original'},
+  {id:'nes-s', b:'nes', name:'고강도 (대표값)',   note:'정품 오리지널 평균', t:'s', p:7500,  l:'original'},
+  {id:'nes-vn',b:'nes', name:'보통 강도 (대표값)', note:'정품 버츄오 평균',   t:'n', p:8500, l:'vertuo'},
+  {id:'nes-vs',b:'nes', name:'고강도 (대표값)',   note:'정품 버츄오 평균',   t:'s', p:8500, l:'vertuo'},
+  {id:'paul-sig',b:'paul',name:'Signature 블렌드',     note:'균형 잡힌 기본 블렌드',           t:'n', p:8200,  v:1, l:'original'},
+  {id:'paul-eth',b:'paul',name:'에티오피아 싱글 오리진',note:'꽃·과일 향과 산미가 도드라지는 편',t:'n', p:8200,  v:1, l:'original'},
+  {id:'paul-col',b:'paul',name:'콜롬비아 싱글 오리진',  note:'부드러운 단맛과 균형',            t:'n', p:8200,  v:1, l:'original'},
+  {id:'paul-gua',b:'paul',name:'과테말라 싱글 오리진',  note:'초콜릿·견과 느낌의 묵직함',        t:'n', p:8200,  v:1, l:'original'},
+  {id:'paul-bra',b:'paul',name:'브라질 싱글 오리진',    note:'고소하고 산미가 낮은 편',         t:'n', p:8200,  v:1, l:'original'},
+  {id:'momo-house',b:'momo',name:'하우스 블렌드',   note:'균형 잡힌 기본 맛',                 t:'n', p:10420, l:'original'},
+  {id:'momo-orig', b:'momo',name:'오리지널 블렌드', note:'하우스 블렌드와 함께 팔리는 기본 블렌드',t:'n', p:10420, l:'original'},
+  {id:'sbx-bre',b:'sbx',name:'브렉퍼스트 블렌드',   note:'가볍고 부드러운 아침용',   t:'n', p:6780, l:'original'},
+  {id:'sbx-house',b:'sbx',name:'하우스 블렌드',     note:'중간 로스트, 무난한 맛',   t:'n', p:6780, v:1, l:'original'},
+  {id:'sbx-col',b:'sbx',name:'콜롬비아 싱글 오리진',note:'깔끔한 산미와 단맛',       t:'n', p:6780, l:'original'},
+  {id:'sbx-esp',b:'sbx',name:'에스프레소 로스트',   note:'진한 다크 로스트',         t:'s', p:6780, l:'original'},
+  {id:'sbx-ita',b:'sbx',name:'이탈리안 로스트',     note:'가장 진한 다크 로스트',    t:'s', p:6780, l:'original'},
+  {id:'illy-cla',b:'illy',name:'Classico', note:'순하고 부드러운 로스트',     t:'n', p:5690, l:'original'},
+  {id:'illy-int',b:'illy',name:'Intenso',  note:'진하고 묵직한 바디',         t:'s', p:5690, v:1, l:'original'},
+  {id:'illy-for',b:'illy',name:'Forte',    note:'일리 중 가장 강한 로스트',   t:'s', p:5690, l:'original'},
 ];
 const CAFES=[
   {id:'sbx',  name:'스타벅스',     price:4700},
@@ -327,6 +340,7 @@ const CAFES=[
   {id:'blue', name:'블루보틀',     price:5500},
   {id:'mega', name:'메가커피',     price:2000},
   {id:'comp', name:'컴포즈',       price:1500},
+  {id:'indie',name:'개인 카페',    price:4500},
 ];
 const MACHINES=[{n:'입문 오리지널',v:130000},{n:'중급 오리지널',v:200000},{n:'버츄오',v:230000}];
 
@@ -338,7 +352,29 @@ const tier=t=>t==='s'?'진한 편':'보통·순한 편';
 
 const S={owned:false,line:'original',perCup:1,days:30,machine:150000,picks:{},price:{},
   cafe:'sbx',C:Object.fromEntries(CAFES.map(c=>[c.id,c.price])),nId:'sbx-house',sId:'sbx-esp',nCaps:2,sCaps:2,tab:'calc'};
-try{const o=JSON.parse(localStorage.getItem('nesp-calc-2')||'null');if(o)Object.assign(S,o,{C:{...S.C,...o.C}})}catch(e){}
+let LAST=null;
+/* 저장값·공유 링크로 들어온 값은 신뢰하지 않고 허용된 키와 범위만 받아들인다 */
+function clean(o){
+  const r={}, num=(v,a,b)=>Number.isFinite(+v)?clamp(Math.round(+v),a,b):undefined, pid=id=>PRODUCTS.some(p=>p.id===id);
+  if(!o||typeof o!=='object')return r;
+  if(typeof o.owned==='boolean')r.owned=o.owned;
+  if(o.line==='original'||o.line==='vertuo')r.line=o.line;
+  for(const [k,a,b] of [['perCup',1,3],['days',1,31],['machine',0,5e6],['nCaps',0,12],['sCaps',0,12]]){const v=num(o[k],a,b);if(v!==undefined)r[k]=v}
+  if(o.picks&&typeof o.picks==='object')r.picks=Object.fromEntries(Object.entries(o.picks).filter(([id,c])=>pid(id)&&num(c,0,10)>0).map(([id,c])=>[id,num(c,1,10)]));
+  if(o.price&&typeof o.price==='object')r.price=Object.fromEntries(Object.entries(o.price).filter(([id,v])=>pid(id)&&num(v,0,1e6)!==undefined).map(([id,v])=>[id,num(v,0,1e6)]));
+  if(CAFES.some(c=>c.id===o.cafe))r.cafe=o.cafe;
+  if(o.C&&typeof o.C==='object')r.C=Object.fromEntries(CAFES.filter(c=>num(o.C[c.id],0,1e5)!==undefined).map(c=>[c.id,num(o.C[c.id],0,1e5)]));
+  if(pid(o.nId))r.nId=o.nId; if(pid(o.sId))r.sId=o.sId;
+  if(['calc','cafe','strength'].includes(o.tab))r.tab=o.tab;
+  return r;
+}
+const KEYS=['owned','line','perCup','days','machine','picks','price','cafe','C','nId','sId','nCaps','sCaps'];
+function applyState(r){if(r.C)r.C={...S.C,...r.C};Object.assign(S,r)}
+const b64e=s=>btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const b64d=s=>atob(s.replace(/-/g,'+').replace(/_/g,'/'));
+try{applyState(clean(JSON.parse(localStorage.getItem('nesp-calc-2')||'null')))}catch(e){}
+let sharedIn=false;
+try{const q=new URLSearchParams(location.search).get('s');if(q){applyState(clean(JSON.parse(b64d(q))));sharedIn=true}}catch(e){}
 const save=()=>{try{localStorage.setItem('nesp-calc-2',JSON.stringify(S))}catch(e){}};
 
 /* ---------- calc ---------- */
@@ -411,7 +447,7 @@ $('#ptable').addEventListener('input',e=>{
 /* ---------- render ---------- */
 function card(p){
   const c=S.picks[p.id]||0;
-  return `<div class="pc ${c?'sel':''}" data-id="${p.id}"><button class="pc-main" data-act="toggle" aria-pressed="${!!c}"><span class="tg ${p.t}">${tier(p.t)}</span><b>${p.name}</b><span class="nt">${p.note}</span><span class="pr num">개당 ${won(unit(p.id))} · 10개입 ${won(p10(p.id))}</span></button>`+
+  return `<div class="pc ${c?'sel':''}" data-id="${p.id}"><button class="pc-main" data-act="toggle" aria-pressed="${!!c}"><span class="tg ${p.t}">${tier(p.t)}</span><b>${p.name}</b><span class="nt">${p.note}</span><span class="pr num">개당 ${won(unit(p.id))} · 10개입 ${won(p10(p.id))}<span class="src ${p.v?'ok':''}">${p.v?'확인된 가격':'예상가'}</span></span></button>`+
     (c?`<div class="mini"><button data-act="dec" aria-label="줄이기">−</button><output>하루 ${c}잔</output><button data-act="inc" aria-label="늘리기">+</button></div>`:'')+'</div>';
 }
 function update(typing){
@@ -428,6 +464,8 @@ function update(typing){
 
   /* tab 1 */
   const n=cups(), cm=n*S.days, caps=cm*S.perCup, mc=monthly(), picked=Object.keys(S.picks).length;
+  const mixTxt=Object.entries(S.picks).map(([id,c])=>`${nm(prod(id))} ${c}잔`).join(' + ');
+  $('#pickSum').innerHTML=n?`지금 고른 구성: 하루 총 <b>${n}잔</b> (${mixTxt})`:'아직 고른 캡슐이 없어요.';
   $('#r1cap').innerHTML=`고른 캡슐 ${picked}종으로 하루 ${n}잔 마실 때, 한 달에 쓰는 돈<span class="spend">지출</span>`;
   $('#r1note').textContent=n?'절약액이 아니라 캡슐을 사는 데 나가는 비용입니다. 카페 대비 얼마나 아끼는지는 \'카페 vs 캡슐\' 탭에서 봅니다.':'위에서 마시는 캡슐을 하나 이상 골라 주세요.';
   $('#r1big').textContent=won(mc);
@@ -445,12 +483,13 @@ function update(typing){
   const payback=!S.owned&&saving>0?S.machine/saving:Infinity;
   $('#cafes').innerHTML=CAFES.map(c=>`<button class="chip" data-c="${c.id}" aria-pressed="${c.id===S.cafe}">${c.name}</button>`).join('');
   $('#c2sub').textContent=`첫 탭에서 고른 캡슐 ${picked}종 기준입니다. 같은 횟수만큼 카페에서 사 마셨다면 어떻게 달라지는지 봅니다.`;
-  $('#c2basis').innerHTML=`하루 ${n}잔 × 한 달 ${S.days}일 = <b class="num">${cm}잔</b><br>${S.owned?'이미 가진 머신이라 머신값은 제외':'머신 '+won(S.machine)+' 포함'}`;
+  $('#c2basis').innerHTML=`하루 ${n}잔 (${mixTxt||'-'}) × 한 달 ${S.days}일 = <b class="num">${cm}잔</b><br>${S.owned?'이미 가진 머신이라 머신값은 제외':'머신 '+won(S.machine)+' 포함'}`;
   $('#c2nWho').textContent='네소프레소 캡슐 (내가 고른 구성)'; $('#c2nAmt').textContent=won(mc);
   $('#c2nDet').textContent=`한 달 ${cm}잔 · 한 잔 ${won(cm?mc/cm:0)}`;
-  $('#c2cWho').textContent=`${cafe.name} 카페`; $('#c2cAmt').textContent=won(cMon);
+  $('#c2cWho').textContent=/카페$/.test(cafe.name)?cafe.name:`${cafe.name} 카페`; $('#c2cAmt').textContent=won(cMon);
   $('#c2cDet').textContent=`한 달 ${cm}잔 · 한 잔 ${won(cp)}`;
   const v=verdict(saving,payback,S.owned), vb=$('#c2verdict');
+  LAST={n,cm,mc,cafe,cp,cMon,saving,payback,v};
   vb.className='verdict '+v.tone; vb.children[0].textContent=v.title; vb.children[1].textContent=v.desc+(saving>0?` 1년이면 ${won(saving*12-(S.owned?0:S.machine))} 남습니다${S.owned?'':' (머신값 제외 후)'}.`:'');
   $('#c2chartH').textContent=S.owned?'누적 지출 비교':'머신값을 포함한 누적 지출 비교';
   $('#c2chart').innerHTML=chart(mc,cMon,S.owned?0:S.machine,payback);
@@ -503,8 +542,76 @@ function chart(mN,mC,start,pb){
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="개월별 누적 지출 비교 그래프">${g}</svg>`;
 }
 
+/* ---------- share / save ---------- */
+const snap=()=>{const o={};KEYS.forEach(k=>o[k]=S[k]);return o};
+const shareUrl=()=>location.origin+location.pathname+'?s='+b64e(JSON.stringify(snap()))+'#'+S.tab;
+let msgTimer;
+function msg(t){$$('.sh-msg').forEach(e=>e.textContent=t);clearTimeout(msgTimer);msgTimer=setTimeout(()=>$$('.sh-msg').forEach(e=>e.textContent=''),5000)}
+const getSaves=()=>{try{return JSON.parse(localStorage.getItem('nesp-saves')||'[]').filter(x=>x&&x.s&&x.label)}catch(e){return []}};
+const putSaves=a=>{try{localStorage.setItem('nesp-saves',JSON.stringify(a.slice(0,10)))}catch(e){}};
+function renderShare(){
+  const saves=getSaves();
+  const html=`<h2>이 결과 저장·공유</h2>
+    <div class="btns"><button class="btn pri" data-sh="link">링크 복사</button><button class="btn" data-sh="img">이미지로 저장</button>${navigator.share?'<button class="btn" data-sh="share">공유하기</button>':''}<button class="btn" data-sh="save">이 브라우저에 저장</button></div>
+    <div class="hint sh-msg" role="status"></div>`+
+    (saves.length?`<div class="others">${saves.map((x,i)=>`<div class="orow"><span>${x.label}</span><span><button class="btn" data-load="${i}">불러오기</button> <button class="btn" data-del="${i}">삭제</button></span></div>`).join('')}</div>`:'<p class="hint" style="margin:0">저장한 계산이 아직 없어요. 링크는 받은 사람이 열면 같은 계산이 그대로 보입니다.</p>');
+  $$('.sharebox').forEach(e=>e.innerHTML=html);
+}
+async function copyText(t){
+  try{await navigator.clipboard.writeText(t);return true}catch(e){}
+  try{const a=document.createElement('textarea');a.value=t;a.style.cssText='position:fixed;opacity:0';document.body.appendChild(a);a.select();const ok=document.execCommand('copy');a.remove();return ok}catch(e){return false}
+}
+async function makeImage(){
+  try{await document.fonts.load('700 40px "Noto Sans KR"')}catch(e){}
+  const L=LAST,W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d'),F='"Noto Sans KR",system-ui,sans-serif';
+  const wrap=(t,mw,fs)=>{x.font=fs;const out=[];let cur='';for(const ch of t){if(x.measureText(cur+ch).width>mw){out.push(cur);cur=ch}else cur+=ch}if(cur)out.push(cur);return out};
+  x.fillStyle='#ffffff';x.fillRect(0,0,W,H);x.fillStyle='#0b7285';x.fillRect(0,0,W,16);
+  x.fillStyle='#14181f';x.font=`800 46px ${F}`;x.fillText('네소프레소 절약 계산기',64,112);
+  x.fillStyle='#5d6675';x.font=`500 30px ${F}`;x.fillText('내가 고른 캡슐',64,186);
+  let y=234;x.fillStyle='#14181f';x.font=`500 34px ${F}`;
+  Object.entries(S.picks).slice(0,5).forEach(([id,k])=>{x.fillText(`${nm(prod(id))} · 하루 ${k}잔`,64,y);y+=48});
+  y=Math.max(y,430)+10;
+  x.fillStyle='#e3f3f5';x.beginPath();x.roundRect(64,y,W-128,200,24);x.fill();
+  x.fillStyle='#0b7285';x.font=`700 30px ${F}`;x.fillText('한 달 캡슐값 (지출)',96,y+56);x.font=`800 84px ${F}`;x.fillText(won(L.mc),96,y+156);
+  y+=224;
+  x.fillStyle='#fbf1de';x.beginPath();x.roundRect(64,y,W-128,200,24);x.fill();
+  x.fillStyle='#b7791f';x.font=`700 30px ${F}`;x.fillText(`${L.cafe.name}에서 마시면 (한 잔 ${won(L.cp)})`,96,y+56);x.font=`800 84px ${F}`;x.fillText(won(L.cMon),96,y+156);
+  y+=270;
+  x.fillStyle=L.saving>0?'#1e8a4c':'#c2410c';
+  wrap(L.v.title,W-128,`800 52px ${F}`).forEach(t=>{x.font=`800 52px ${F}`;x.fillText(t,64,y);y+=66});
+  y+=6;x.fillStyle='#5d6675';
+  wrap(L.v.desc,W-128,`500 32px ${F}`).forEach(t=>{x.font=`500 32px ${F}`;x.fillText(t,64,y);y+=46});
+  x.fillStyle='#8a93a1';x.font=`500 26px ${F}`;x.fillText(`한 달 ${S.days}일 · 하루 ${L.n}잔 · 예상가 기준`,64,H-90);
+  x.fillText(location.host+location.pathname,64,H-48);
+  return new Promise(r=>c.toBlob(r,'image/png'));
+}
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-sh],[data-load],[data-del]');if(!b)return;
+  if(b.dataset.sh==='link'){msg(await copyText(shareUrl())?'링크를 복사했어요. 붙여넣어 보내면 같은 계산이 열립니다.':'복사하지 못했어요. 주소창의 링크를 직접 복사해 주세요.')}
+  else if(b.dataset.sh==='img'||b.dataset.sh==='share'){
+    if(!LAST){msg('계산 결과가 아직 없어요.');return}
+    try{
+      const blob=await makeImage(), file=new File([blob],'nespresso-calc.png',{type:'image/png'});
+      if(b.dataset.sh==='share'){
+        const data={title:'네소프레소 절약 계산기',text:`한 달 캡슐값 ${won(LAST.mc)} · ${LAST.v.title}`,url:shareUrl()};
+        if(navigator.canShare&&navigator.canShare({files:[file]}))data.files=[file];
+        try{await navigator.share(data)}catch(err){if(err&&err.name!=='AbortError')msg('공유하지 못했어요.')}
+      }else{
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='nespresso-calc.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);msg('이미지를 저장했어요.');
+      }
+    }catch(err){msg('이미지를 만들지 못했어요.')}
+  }
+  else if(b.dataset.sh==='save'){
+    if(!LAST)return;const a=getSaves();
+    const d=new Date(), label=`${d.getMonth()+1}/${d.getDate()} · 하루 ${LAST.n}잔 · 월 ${won(LAST.mc)} · ${LAST.cafe.name} 대비 ${LAST.saving>0?'+':'−'}${won(Math.abs(LAST.saving))}`;
+    a.unshift({label,s:snap()});putSaves(a);renderShare();msg('이 브라우저에 저장했어요.');
+  }
+  else if(b.dataset.load!==undefined){const x=getSaves()[+b.dataset.load];if(x){applyState(clean(x.s));fixLine();buildPriceTable();update();msg('저장한 계산을 불러왔어요.')}}
+  else if(b.dataset.del!==undefined){const a=getSaves();a.splice(+b.dataset.del,1);putSaves(a);renderShare()}
+});
+
 /* ---------- init ---------- */
-fixLine();buildPriceTable();update();
+fixLine();buildPriceTable();update();renderShare();if(sharedIn)msg('공유받은 계산을 불러왔어요.');
 const h=(location.hash||'').slice(1);
 go(['calc','cafe','strength'].includes(h)?h:(['calc','cafe','strength'].includes(S.tab)?S.tab:'calc'),false);
 </script>
