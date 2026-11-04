@@ -166,6 +166,10 @@ select.input{appearance:auto}
 .btn.pri{background:var(--fg);color:var(--surface);border-color:var(--fg)}
 .sharebox{border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:12px}
 .sharebox h2{margin:0}
+.feedback{border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:8px;margin-top:18px}
+.feedback h2{margin:0;font-size:16px}
+.feedback p{margin:0}
+.feedback a.btn{justify-self:start;text-decoration:none;color:inherit}
 .btns{display:flex;flex-wrap:wrap;gap:8px}
 .sh-msg{min-height:20px}
 .pick-sum{background:var(--field);border-radius:10px;padding:10px 14px;font-size:14px;margin:0 0 4px}
@@ -319,6 +323,11 @@ section+section{margin-top:26px}
 </div>
 
 <p class="note">캡슐 가격은 10개입 기준입니다. 폴바셋(마켓컬리), 스타벅스 하우스 블렌드, 일리 Intenso는 2026년 하반기에 쇼핑몰이나 가격 비교 사이트에서 확인한 값이고, 나머지는 같은 브랜드의 비슷한 상품 가격으로 가정한 예상가입니다. 카페 음료 가격도 예상가입니다. 판매처와 시기에 따라 다르니 직접 입력한 가격이 기준입니다. 맛 설명과 '진한 편' 구분은 일반적인 로스트 특성에 따른 추정입니다. 폴바셋·모모스·스타벅스·일리는 네스프레소 정품이 아닌 오리지널 머신용 호환 캡슐이라 버츄오에서는 쓸 수 없습니다. 머신 감가, 전기, 석회 제거 비용, 우유·시럽 같은 추가 재료비는 계산에 넣지 않았습니다.</p>
+<section class="feedback">
+  <h2>💬 의견 보내기</h2>
+  <p class="hint">써 보시고 불편했던 점, 있었으면 하는 기능, 추가하고 싶은 캡슐이나 실제와 다른 가격이 있으면 알려 주세요. 로그인 없이 1분이면 됩니다.</p>
+  <a class="btn pri" id="fbLink" href="https://docs.google.com/forms/d/e/1FAIpQLSeL3SWvLPsecACa_VKkRJF_TKQ7dk6zOtD6csQVCXvVRygcGA/viewform" target="_blank" rel="noopener">의견 남기기</a>
+</section>
 <p class="hint" id="usedCount" hidden></p>
 <p class="hint">방문 통계는 쿠키 없이 GoatCounter로 집계하며, 입력한 캡슐·가격 같은 값은 전송하지 않습니다.</p>
 </div></main>
@@ -651,7 +660,8 @@ document.addEventListener('click',async e=>{
     const d=new Date(), label=`${d.getMonth()+1}/${d.getDate()} · 주 ${Math.round(LAST.M/WK)}잔 · 월 ${won(LAST.nesMon)} · ${LAST.cafe.name} 대비 ${LAST.saving>0?'+':'−'}${won(Math.abs(LAST.saving))}`;
     a.unshift({label,s:snap()});putSaves(a);renderShare();msg('이 브라우저에 저장했어요.');
   }
-  else if(b.dataset.load!==undefined){const x=getSaves()[+b.dataset.load];if(x){applyState(clean(x.s));fixLine();buildPriceTable();renderDrinks();update();msg('저장한 계산을 불러왔어요.')}}
+  else if(b.dataset.load!==undefined){const x=getSaves()[+b.dataset.load];if(x){applyState(clean(x.s));$('#fbLink').addEventListener('click',()=>track('feedback'));
+fixLine();buildPriceTable();renderDrinks();update();msg('저장한 계산을 불러왔어요.')}}
   else if(b.dataset.del!==undefined){const a=getSaves();a.splice(+b.dataset.del,1);putSaves(a);renderShare()}
 });
 
